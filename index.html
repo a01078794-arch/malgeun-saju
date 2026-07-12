@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>맑은사주 — 계산은 정직하게, 해석은 겁 없이</title>
+<meta name="description" content="진태양시·서머타임·절기까지 천문 계산으로 검증하는 무료 사주. 계산과 해석을 분리해 보여주고, 쉬운말/전문가 모드를 고를 수 있습니다. 광고 없음, 겁주기 없음.">
+<meta property="og:title" content="맑은사주 — 계산은 정직하게, 해석은 겁 없이">
+<meta property="og:description" content="어디까지가 '계산된 사실'이고 어디부터가 '해석'인지 구분해서 보여주는 유일한 사주. 쉬운말 모드 지원.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔮</text></svg>">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">맑은사주</div>
+    <p class="tagline">계산은 정직하게 · 해석은 겁 없이</p>
+    <div class="usp">
+      <span>🔭 <b>진태양시·서머타임·절기</b>까지 천문 계산</span>
+      <span>⚖️ <b>계산 vs 해석</b>을 구분해 표시</span>
+      <span>💬 <b>쉬운말 / 전문가</b> 모드 선택</span>
+      <span>🚫 광고 없음 · 겁주기 없음</span>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn" data-mode="easy">쉬운말 모드</button>
+      <button class="mode-btn" data-mode="expert">전문가 모드</button>
+    </div>
+  </header>
+
+  <section class="card">
+    <form id="saju-form">
+      <div class="row">
+        <div class="field"><label>년 (양력)</label><input type="number" id="year" placeholder="1994" min="1900" max="2050" required></div>
+        <div class="field"><label>월</label><input type="number" id="month" placeholder="2" min="1" max="12" required></div>
+        <div class="field"><label>일</label><input type="number" id="day" placeholder="26" min="1" max="31" required></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>시</label><input type="number" id="hour" placeholder="8" min="0" max="23"></div>
+        <div class="field"><label>분</label><input type="number" id="minute" placeholder="30" min="0" max="59" value="0"></div>
+        <div class="field"><label>성별</label><select id="gender"><option value="F">여성</option><option value="M">남성</option></select></div>
+      </div>
+      <label class="check"><input type="checkbox" id="hour-unknown"> 태어난 시간을 몰라요 <small>(시주 빼고 3주만 정직하게 봅니다)</small></label>
+      <div class="row">
+        <div class="field"><label>출생 지역 (진태양시 보정용)</label><select id="city"></select></div>
+      </div>
+      <button type="submit" class="btn">내 사주 보기 — 무료</button>
+    </form>
+  </section>
+
+  <div id="result" class="hidden"></div>
+
+  <section class="card">
+    <h2>🔬 이 사이트가 다른 이유</h2>
+    <ul class="method">
+      <li><b>절기를 천문 계산합니다.</b> 입춘 전 출생은 전년도 연주로, 월 경계는 절기 '시각'까지 계산해 판정합니다. 경계에 가까우면 경고를 띄웁니다 — 대부분의 앱은 이걸 숨기거나 틀립니다.</li>
+      <li><b>진태양시로 시주를 세웁니다.</b> 출생지 경도 보정 + 균시차 + 역사적 표준시(1954–61년 동경 127.5도) + 서머타임(1948–60, 1987–88)까지 반영하고, <b>보정 과정을 전부 보여드립니다.</b></li>
+      <li><b>계산과 해석을 구분합니다.</b> 파란 배지(계산)는 100% 재현 가능한 사실, 금색 배지(해석)는 전통 명리학의 통설 요약입니다. 이 둘을 섞어 말하지 않는 것이 정직한 사주의 시작이라고 믿습니다.</li>
+      <li><b>겁주지 않습니다.</b> 신살은 '관리 포인트'로만 안내하고, 불안을 조성해 결제를 유도하지 않습니다.</li>
+      <li><b>한계를 밝힙니다.</b> 신강약·용신의 정밀 판단, 개인 상황 반영은 자동 계산의 한계 밖입니다. 해석의 "100% 적중"은 존재하지 않습니다 — 존재한다고 말하는 곳을 조심하세요.</li>
+    </ul>
+  </section>
+
+  <footer>
+    맑은사주 © 2026 · 만세력 계산 오픈소스 검증 가능<br>
+    해석은 명리학 고전(궁통보감·연해자평·삼명통회 등)의 통설 요약이며 과학적으로 검증된 예측이 아닙니다.<br>
+    중요한 결정은 언제나 당신의 판단과 전문가(의료·법률·재무)의 조언이 우선입니다.
+  </footer>
+</div>
+<script src="js/manseryeok.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
