@@ -70,7 +70,7 @@ function onSubmit(e){
   render(LAST);
   const params=new URLSearchParams({y,mo:m,d,g,c:ci});
   if(!hourUnknown){ params.set("h",h); params.set("mi",mi); }
-  history.replaceState(null,"","?"+params.toString());
+  try{ history.replaceState(null,"","?"+params.toString()); }catch(_e){ /* file:// 등 로컬 실행 환경 */ }
   document.getElementById("result").scrollIntoView({behavior:"smooth"});
 }
 
