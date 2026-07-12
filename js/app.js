@@ -215,18 +215,28 @@ function render(r){
     curTxt=`<p><b>지금 대운(${STEMS[cur.stem]}${BRANCHES[cur.branch]}, ${cur.startAge}~${cur.startAge+9}세)</b>의 키워드는 <b>${g1}</b> — ${T(TEN_GOD_TEXT[g1])}. 10년 단위로 삶의 배경 계절이 바뀝니다.</p>`; }
   const ch4=chapter("四","대운 — 십 년의 계절","계산", luckHtml+curTxt+`<p class="note">대운수 ${r.luckStart} · ${r.forward?"순행":"역행"} (절기 정밀 계산)</p>`);
 
-  /* ── 五: 인연 (잠금) ── */
+  /* ══ 테마 리포트 (잠금 상품) ══ */
+  const years5=yearlyFortune(P,nowYear,5);
+  const gender=r.input.gender||"F";
+
+  /* ── 五: 배우자·인연운 ── */
   const iljiGod=tenGodBranch(ds,P.day.branch);
   const iljiStage=twelveStage(ds,P.day.branch);
   const hongranSal=sals.find(s=>s.name==="홍란·천희");
-  const years5=yearlyFortune(P,nowYear,5);
-  const bondYears=years5.filter(y=>y.events.some(e=>e.includes("합")||e.includes("인연")));
-  let loveHtml=`<p class="lede">${T(SPOUSE_PALACE_TEXT[iljiGod])}</p>
-    <p>배우자 자리의 기운은 <b>${iljiGod}</b>, 자리의 계절은 <b>${iljiStage}</b> — ${T(TWELVE_TEXT[iljiStage])}.</p>`;
-  if(hongranSal) loveHtml+=`<p>💮 <b>인연의 별</b>: 홍란은 <b>${BRANCHES_KO[hongranSal.hongran]}</b>, 천희는 <b>${BRANCHES_KO[hongranSal.cheonhui]}</b> — 이 글자가 오는 해·대운에 만남과 경사의 기운이 켜집니다.</p>`;
-  if(bondYears.length) loveHtml+=`<p>🔔 <b>앞으로 5년 중 인연이 움직이는 해</b>: ${bondYears.map(y=>`<b>${y.year}</b>`).join(", ")} — ${bondYears[0].events.find(e=>e.includes("합")||e.includes("인연"))||""}</p>`;
+  const ssi=SPOUSE_STAR_INFO[gender];
+  let spCount=0, spWhere=[];
+  for(const [key,lab] of posOrder){ const p=P[key]; if(!p) continue;
+    if(key!=="day"){ const g1=tenGod(ds,p.stem); if(ssi.stars.includes(g1)){spCount++; spWhere.push(lab.replace("주","간")+" "+g1);} }
+    const g2=tenGodBranch(ds,p.branch); if(ssi.stars.includes(g2)){spCount++; spWhere.push(lab.replace("주","지")+" "+g2);} }
+  let loveHtml=`<p class="lede">${T(ssi)} ${T(SPOUSE_COUNT_TEXT[Math.min(spCount,3)])}</p>`;
+  if(spWhere.length) loveHtml+=`<p>내 사주 속 배우자 기운: <b>${spWhere.join(" · ")}</b></p>`;
+  loveHtml+=`<p><b>배우자 자리(일지) 풀이</b> — ${T(SPOUSE_PALACE_TEXT[iljiGod])}<br>자리의 계절은 <b>${iljiStage}</b>: ${T(TWELVE_TEXT[iljiStage])}.</p>`;
+  if(hongranSal) loveHtml+=`<p>💮 <b>인연의 별</b>: 홍란(만남)은 <b>${BRANCHES_KO[hongranSal.hongran]}</b>, 천희(경사)는 <b>${BRANCHES_KO[hongranSal.cheonhui]}</b> — 이 글자가 오는 해·대운에 인연 기운이 켜집니다.</p>`;
+  const bondYears=years5.filter(y=>y.events.some(e=>e.includes("합")||e.includes("인연"))||ssi.stars.includes(y.stemGod)||(hongranSal&&(y.branch===hongranSal.hongran||y.branch===hongranSal.cheonhui)));
+  if(bondYears.length) loveHtml+=`<p>🔔 <b>앞으로 5년 중 인연이 움직이는 해</b>: ${bondYears.map(y=>`<b>${y.year}</b>`).join(", ")}</p>`;
   else loveHtml+=`<p>앞으로 5년은 인연 자리가 조용한 편 — 억지 타이밍보다 나를 채우는 시간으로 쓰기 좋은 구간입니다.</p>`;
-  const ch5=chapter("五","인연 — 배우자궁 풀이","해석", loveHtml, {locked:true});
+  loveHtml+=`<p>🤝 <b>천간이 합하는 상대</b>: ${DAY_MASTER_TEXT[STEM_HAP[STEMS[ds]]].title}(${STEM_HAP[STEMS[ds]]}) 일간 — 처음 만나도 오래 안 듯 편안한 조합의 고전적 공식입니다.</p>`;
+  const ch5=chapter("五","배우자·인연운","해석", loveHtml, {locked:true});
 
   /* ── 六: 재물 (잠금) ── */
   const wealthGods=["정재","편재"];
@@ -243,7 +253,38 @@ function render(r){
   wealthHtml+=`<p class="note">공통 처방: 동업·보증·큰돈 빌려주기는 사주 불문 최다 실패 경로입니다 — 특히 비겁이 강해지는 해에는요.</p>`;
   const ch6=chapter("六","재물 — 나의 돈그릇","해석", wealthHtml, {locked:true});
 
-  /* ── 七: 오년의 달력 (잠금) ── */
+  /* ── 七: 신년운세 (올해 + 월별) ── */
+  const thisYF=years5[0];
+  let nyHtml=`<p class="lede">${nowYear}년(${STEMS[thisYF.stem]}${BRANCHES[thisYF.branch]})은 나에게 <b>${thisYF.stemGod}·${thisYF.branchGod}</b>의 해 — ${T(TEN_GOD_TEXT[thisYF.stemGod])}.</p>`;
+  thisYF.events.forEach(e2=>{ nyHtml+=`<p class="yevent">✨ ${e2}</p>`; });
+  const yStemIdx=((nowYear-4)%10+10)%10;
+  const inStemTbl=[2,4,6,8,0];
+  const YUKHAP2={0:1,1:0,2:11,11:2,3:10,10:3,4:9,9:4,5:8,8:5,6:7,7:6};
+  let mHtml=`<div class="month-grid">`;
+  for(let mi2=0; mi2<12; mi2++){
+    const ms=(inStemTbl[yStemIdx%5]+mi2)%10, mb=(mi2+2)%12;
+    const mg=tenGod(ds,ms);
+    const rel=[];
+    if(YUKHAP2[mb]===P.day.branch) rel.push("💞");
+    if(((mb-P.day.branch)%12+12)%12===6) rel.push("⚡");
+    mHtml+=`<div class="mcard ${rel.length?"mark":""}"><b>${MONTH_RANGE_LABEL[mi2]}</b><span class="mgz">${STEMS[ms]}${BRANCHES[mb]}</span><span class="mgod">${mg}${rel.join("")}</span><p>${MONTH_TIP[mg]}</p></div>`;
+  }
+  mHtml+=`</div><p class="note">월 경계는 절기 기준(날짜는 근사) · 💞=배우자궁과 합(관계·협력의 달) ⚡=배우자궁과 충(변동의 달)</p>`;
+  const ch7=chapter("七",`${nowYear} 신년운세 — 열두 달의 리듬`,"해석", nyHtml+mHtml, {locked:true});
+
+  /* ── 八: 직업·적성운 ── */
+  const groupMap={"비견":"비겁","겁재":"비겁","식신":"식상","상관":"식상","편재":"재성","정재":"재성","편관":"관성","정관":"관성","편인":"인성","정인":"인성"};
+  const groupCnt={"비겁":0,"식상":0,"재성":0,"관성":0,"인성":0};
+  Object.entries(gods).forEach(([g,n])=>{ groupCnt[groupMap[g]]+=n; });
+  const domGroup=Object.entries(groupCnt).sort((a,b)=>b[1]-a[1])[0];
+  const cg=CAREER_GROUP_TEXT[domGroup[0]];
+  let carHtml=`<p class="lede">내 사주에서 가장 큰 기운은 <b>${domGroup[0]}</b>(${domGroup[1]}개) — 당신은 <b>"${cg.title}"</b> 유형입니다.</p><p>${T(cg)}</p>`;
+  if(sals.find(s=>s.name.startsWith("현침"))) carHtml+=`<p>🪡 현침살 보유 — 정밀·분석·의료·기술 계열에 추가 가산점이 붙는 구조.</p>`;
+  if(sals.find(s=>s.name.startsWith("화개"))) carHtml+=`<p>🎨 화개 보유 — 연구·예술·정신세계 쪽 깊이가 무기가 됩니다.</p>`;
+  carHtml+=`<p><b>계절 처방과 연결하면</b> — ${JOHU_HINT[STEM_ELEM[ds]][season]}. 일과 환경을 고를 때 이 보약 기운을 곁에 두는 게 전통적 개운법입니다.</p>`;
+  const ch8=chapter("八","직업·적성 — 나의 쓰임","해석", carHtml, {locked:true});
+
+  /* ── 九: 오년의 달력 (잠금) ── */
   let calHtml=`<div class="year-cards">`;
   years5.forEach(yf=>{
     calHtml+=`<div class="ycard"><h4>${yf.year} <span>${STEMS[yf.stem]}${BRANCHES[yf.branch]}</span></h4>
@@ -251,9 +292,9 @@ function render(r){
       ${yf.events.map(e2=>`<p class="yevent">✨ ${e2}</p>`).join("")}</div>`;
   });
   calHtml+=`</div><p class="note">세운은 대운보다 신뢰도가 한 단계 낮은 것이 전통 통설입니다 — 큰 흐름은 대운으로, 해의 리듬은 세운으로 보세요.</p>`;
-  const ch7=chapter("七","오년의 달력","해석", calHtml, {locked:true});
+  const ch9=chapter("九","오년의 달력","해석", calHtml, {locked:true});
 
-  el.innerHTML=cardHtml+`<div class="book">`+ch0+ch1+ch2+ch3+ch4+ch5+ch6+ch7+`</div>
+  el.innerHTML=cardHtml+`<div class="book">`+ch0+ch1+ch2+ch3+ch4+ch5+ch6+ch7+ch8+ch9+`</div>
     <section class="chapter outro">
       <p class="outro-line">계산은 여기까지가 사실이고, 해석은 여기까지가 전통입니다.<br>나머지는 당신이 씁니다.</p>
       <button class="btn secondary" id="copy-text">텍스트 요약 복사</button>

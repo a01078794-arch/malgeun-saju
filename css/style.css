@@ -162,3 +162,13 @@ footer{text-align:center; color:var(--ink-dim); font-size:.74rem; margin-top:36p
   .god-chips{grid-template-columns:1fr 1fr;}
   .year-cards{grid-template-columns:repeat(2,1fr);}
 }
+
+/* 월별 운세 그리드 */
+.month-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:14px;}
+.mcard{background:#fffdf7; border:1px solid var(--line); padding:10px 12px; font-size:.8rem;}
+.mcard.mark{border-color:var(--dansa);}
+.mcard b{display:block; color:var(--ink-dim); font-size:.72rem;}
+.mcard .mgz{font-family:"Noto Serif KR",serif; font-weight:700; margin-right:6px;}
+.mcard .mgod{color:var(--ok); font-size:.74rem;}
+.mcard p{margin-top:3px; color:var(--ink-soft); font-size:.76rem; line-height:1.5;}
+@media (min-width:560px){ .month-grid{grid-template-columns:repeat(3,1fr);} }
