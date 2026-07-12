@@ -20,8 +20,19 @@ const store = {
 let MODE = store.get("sajuMode") || "easy";
 let LAST = null;
 
-document.addEventListener("DOMContentLoaded", () => {
+// 어떤 에러든 화면에 보이게 (원격 진단용)
+window.addEventListener("error", ev=>{
+  try{
+    const b=document.createElement("div");
+    b.style.cssText="position:fixed;top:0;left:0;right:0;background:#b5493a;color:#fff;padding:8px 12px;font-size:12px;z-index:999;word-break:break-all";
+    b.textContent="오류: "+(ev.message||ev.error)+" @"+(ev.lineno||"?");
+    document.body.appendChild(b);
+  }catch(_e){}
+});
+
+function initApp(){
   const citySel = document.getElementById("city");
+  if (!citySel || citySel.options.length>0) return; // 중복 초기화 방지
   CITIES.forEach((c,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=c.name; citySel.appendChild(o); });
   document.getElementById("saju-form").addEventListener("submit", onSubmit);
   document.getElementById("hour-unknown").addEventListener("change", e=>{
@@ -44,7 +55,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("city").value=q.get("c")||0;
     document.getElementById("saju-form").requestSubmit();
   }
-});
+}
+// 문서가 이미 로드된 상태여도, 아직 로딩 중이어도 반드시 1회 초기화
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initApp);
+else initApp();
 
 function updateModeButtons(){
   document.querySelectorAll(".mode-btn").forEach(b=>b.classList.toggle("active", b.dataset.mode===MODE));
