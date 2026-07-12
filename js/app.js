@@ -1,4 +1,4 @@
-/* 맑은사주 — UI 로직 */
+/* 맑은사주 v2 — 문집 × 부적 UI */
 "use strict";
 
 const CITIES = [
@@ -10,38 +10,33 @@ const CITIES = [
   {name:"제주", lon:126.53},{name:"창원", lon:128.68},{name:"천안", lon:127.15},
   {name:"포항", lon:129.36},{name:"목포", lon:126.39},{name:"여수", lon:127.66},{name:"원주", lon:127.95}
 ];
+const ELEM_COLOR = {"목":"#5a7d5a","화":"#b5493a","토":"#c29a4b","금":"#8a8f98","수":"#4a6b8a"};
 
-let MODE = localStorage.getItem("sajuMode") || "easy"; // easy | expert
+let MODE = localStorage.getItem("sajuMode") || "easy";
 let LAST = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   const citySel = document.getElementById("city");
-  CITIES.forEach((c,i)=>{
-    const o = document.createElement("option");
-    o.value = i; o.textContent = c.name;
-    citySel.appendChild(o);
-  });
+  CITIES.forEach((c,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=c.name; citySel.appendChild(o); });
   document.getElementById("saju-form").addEventListener("submit", onSubmit);
   document.getElementById("hour-unknown").addEventListener("change", e=>{
     document.getElementById("hour").disabled = e.target.checked;
     document.getElementById("minute").disabled = e.target.checked;
   });
   document.querySelectorAll(".mode-btn").forEach(b=>b.addEventListener("click", ()=>{
-    MODE = b.dataset.mode; localStorage.setItem("sajuMode", MODE);
-    updateModeButtons();
-    if (LAST) render(LAST);
+    MODE=b.dataset.mode; localStorage.setItem("sajuMode",MODE); updateModeButtons(); if(LAST) render(LAST);
   }));
   updateModeButtons();
-  // URL 파라미터 복원 (공유 링크)
+  window.addEventListener("scroll", updateProgress, {passive:true});
   const q = new URLSearchParams(location.search);
   if (q.get("y")){
-    document.getElementById("year").value = q.get("y");
-    document.getElementById("month").value = q.get("mo");
-    document.getElementById("day").value = q.get("d");
+    document.getElementById("year").value=q.get("y");
+    document.getElementById("month").value=q.get("mo");
+    document.getElementById("day").value=q.get("d");
     if(q.get("h")!==null && q.get("h")!==""){ document.getElementById("hour").value=q.get("h"); document.getElementById("minute").value=q.get("mi")||0; }
-    else { document.getElementById("hour-unknown").checked = true; document.getElementById("hour").disabled=true; document.getElementById("minute").disabled=true; }
-    document.getElementById("gender").value = q.get("g")||"F";
-    document.getElementById("city").value = q.get("c")||0;
+    else { document.getElementById("hour-unknown").checked=true; document.getElementById("hour").disabled=true; document.getElementById("minute").disabled=true; }
+    document.getElementById("gender").value=q.get("g")||"F";
+    document.getElementById("city").value=q.get("c")||0;
     document.getElementById("saju-form").requestSubmit();
   }
 });
@@ -49,211 +44,278 @@ document.addEventListener("DOMContentLoaded", () => {
 function updateModeButtons(){
   document.querySelectorAll(".mode-btn").forEach(b=>b.classList.toggle("active", b.dataset.mode===MODE));
 }
+function updateProgress(){
+  const res = document.getElementById("result");
+  const bar = document.getElementById("read-progress");
+  if (!bar || res.classList.contains("hidden")) return;
+  const rect = res.getBoundingClientRect();
+  const total = rect.height - window.innerHeight;
+  const done = Math.min(Math.max(-rect.top, 0), Math.max(total,1));
+  bar.style.width = (total>0 ? (done/total*100) : 0) + "%";
+}
 
 function onSubmit(e){
   e.preventDefault();
-  const y = +document.getElementById("year").value;
-  const m = +document.getElementById("month").value;
-  const d = +document.getElementById("day").value;
-  const hourUnknown = document.getElementById("hour-unknown").checked;
-  const h = hourUnknown? null : +document.getElementById("hour").value;
-  const mi = hourUnknown? null : +document.getElementById("minute").value;
-  const g = document.getElementById("gender").value;
-  const ci = +document.getElementById("city").value;
-  if (!y || !m || !d || y<1900 || y>2050){ alert("생년월일을 확인해주세요 (1900~2050)"); return; }
-  const dt = new Date(y, m-1, d);
-  if (dt.getMonth() !== m-1 || dt.getDate() !== d){ alert("존재하지 않는 날짜입니다"); return; }
-  const input = {year:y, month:m, day:d, hour:h??12, minute:mi??0, hourUnknown, gender:g, longitude:CITIES[ci].lon, placeName:CITIES[ci].name};
-  const result = computeSaju(input);
-  LAST = result;
-  render(result);
-  // 공유 URL 갱신
-  const params = new URLSearchParams({y, mo:m, d, g, c:ci});
+  const y=+document.getElementById("year").value, m=+document.getElementById("month").value, d=+document.getElementById("day").value;
+  const hourUnknown=document.getElementById("hour-unknown").checked;
+  const h=hourUnknown?null:+document.getElementById("hour").value;
+  const mi=hourUnknown?null:+document.getElementById("minute").value;
+  const g=document.getElementById("gender").value, ci=+document.getElementById("city").value;
+  if (!y||!m||!d||y<1900||y>2050){ alert("생년월일을 확인해주세요 (1900~2050)"); return; }
+  const dt=new Date(y,m-1,d);
+  if (dt.getMonth()!==m-1||dt.getDate()!==d){ alert("존재하지 않는 날짜입니다"); return; }
+  if (!hourUnknown && (isNaN(h)||h<0||h>23)){ alert("태어난 시를 입력하거나 '시간 모름'을 선택해주세요"); return; }
+  const input={year:y,month:m,day:d,hour:h??12,minute:mi??0,hourUnknown,gender:g,longitude:CITIES[ci].lon,placeName:CITIES[ci].name};
+  LAST=computeSaju(input);
+  render(LAST);
+  const params=new URLSearchParams({y,mo:m,d,g,c:ci});
   if(!hourUnknown){ params.set("h",h); params.set("mi",mi); }
-  history.replaceState(null,"", "?"+params.toString());
+  history.replaceState(null,"","?"+params.toString());
   document.getElementById("result").scrollIntoView({behavior:"smooth"});
 }
 
-function T(obj){ return obj[MODE] || obj.easy; }
+function T(o){ return o[MODE]||o.easy; }
 function gz(p){ return STEMS[p.stem]+BRANCHES[p.branch]; }
 function gzKo(p){ return STEMS_KO[p.stem]+BRANCHES_KO[p.branch]; }
+function chapter(no, title, badge, inner, opts={}){
+  const lock = opts.locked? ` data-locked="true"` : "";
+  return `<section class="chapter${opts.locked?" locked":""}" id="ch-${no}"${lock}>
+    <div class="ch-head"><span class="ch-no">${no}</span><h2>${title}</h2>${badge?`<span class="badge ${badge==="계산"?"badge-calc":"badge-interp"}">${badge}</span>`:""}</div>
+    <div class="ch-body">${inner}</div>
+    ${opts.locked?`<div class="paywall"><div class="pw-inner">
+      <p class="pw-price"><del>990원</del> <b>오픈 기념 무료</b></p>
+      <button class="btn unlock-btn" data-target="ch-${no}">열어보기</button>
+      <p class="pw-note">정식 오픈 후 990원 — 지금은 전부 무료로 풀어드려요</p>
+    </div></div>`:""}
+  </section>`;
+}
 
 function render(r){
-  const el = document.getElementById("result");
+  const el=document.getElementById("result");
   el.classList.remove("hidden");
-  const P = r.pillars, ds = P.day.stem;
-  const posOrder = [["hour","시주"],["day","일주"],["month","월주"],["year","연주"]];
+  document.getElementById("progress-wrap").classList.remove("hidden");
+  const P=r.pillars, ds=P.day.stem;
+  const season=seasonOfMonthIdx(r.monthIdx);
+  const dm=DAY_MASTER_TEXT[STEMS[ds]];
+  const label=CHAR_LABELS[STEMS[ds]][season];
+  const hapStem=STEM_HAP[STEMS[ds]];
+  const hapTitle=DAY_MASTER_TEXT[hapStem].title;
+  const motherElem=ELEM_MOTHER[STEM_ELEM[ds]];
 
-  /* ---- 명식 카드 ---- */
-  let pillarHtml = `<div class="pillar-grid">`;
-  for (const [key,label] of posOrder){
-    const p = P[key];
-    if (!p){ pillarHtml += `<div class="pillar unknown"><div class="p-label">${label}</div><div class="p-char">?</div><div class="p-sub">시간 모름</div></div>`; continue; }
-    const sGod = key==="day" ? "일간" : tenGod(ds, p.stem);
-    const bGod = tenGodBranch(ds, p.branch);
-    const stage = twelveStage(ds, p.branch);
-    pillarHtml += `<div class="pillar ${key==='day'?'day-pillar':''}">
-      <div class="p-label">${label}</div>
-      <div class="p-god">${sGod}</div>
-      <div class="p-char elem-${STEM_ELEM[p.stem]}">${STEMS[p.stem]}</div>
-      <div class="p-char elem-${BRANCH_ELEM[p.branch]}">${BRANCHES[p.branch]}</div>
-      <div class="p-god">${bGod}</div>
-      <div class="p-sub">${stage}</div>
+  /* ── 부적 카드 (공유의 핵심) ── */
+  const cardHtml=`
+  <section class="talisman-wrap">
+    <div class="talisman" id="talisman">
+      <div class="tal-top">四柱 · ${SEASON_NAMES[season]}</div>
+      <div class="tal-label">${label}</div>
+      <div class="tal-gz">${["hour","day","month","year"].map(k=>P[k]?`<span style="color:${ELEM_COLOR[STEM_ELEM[P[k].stem]]}">${STEMS[P[k].stem]}</span><span style="color:${ELEM_COLOR[BRANCH_ELEM[P[k].branch]]}">${BRANCHES[P[k].branch]}</span>`:"").join(" ")}</div>
+      <div class="tal-tags">
+        <span>합이 드는 상대 · ${hapTitle}(${hapStem})</span>
+        <span>나를 채우는 기운 · ${ELEM_KO[motherElem]}(${motherElem})</span>
+      </div>
+      <div class="tal-seal">맑은<br>사주</div>
+    </div>
+    <div class="tal-actions">
+      <button class="btn" id="save-card">부적 카드 저장</button>
+      <button class="btn secondary" id="copy-link">내 사주 링크 복사</button>
+    </div>
+  </section>`;
+
+  /* ── 序: 명식 + 계산 공개 ── */
+  const posOrder=[["hour","시주"],["day","일주"],["month","월주"],["year","연주"]];
+  let pillarHtml=`<div class="pillar-grid">`;
+  for (const [key,lab] of posOrder){
+    const p=P[key];
+    if(!p){ pillarHtml+=`<div class="pillar unknown"><div class="p-label">${lab}</div><div class="p-char">—</div><div class="p-sub">시간 모름</div></div>`; continue; }
+    const sGod=key==="day"?"일간":tenGod(ds,p.stem);
+    pillarHtml+=`<div class="pillar ${key==='day'?'day-pillar':''}">
+      <div class="p-label">${lab}</div><div class="p-god">${sGod}</div>
+      <div class="p-char" style="color:${ELEM_COLOR[STEM_ELEM[p.stem]]}">${STEMS[p.stem]}</div>
+      <div class="p-char" style="color:${ELEM_COLOR[BRANCH_ELEM[p.branch]]}">${BRANCHES[p.branch]}</div>
+      <div class="p-god">${tenGodBranch(ds,p.branch)}</div><div class="p-sub">${twelveStage(ds,p.branch)}</div>
     </div>`;
   }
-  pillarHtml += `</div>`;
+  pillarHtml+=`</div>`;
+  let calcHtml=`<ul class="calc-log">${r.calcLog.map(l=>`<li>${l}</li>`).join("")}</ul>`;
+  if(r.warnings.length) calcHtml+=r.warnings.map(w=>`<div class="warning">⚠️ ${w}</div>`).join("");
+  const ch0=chapter("序","나의 명식","계산",
+    pillarHtml+`<details class="calc-details"><summary>이 명식이 나온 계산 과정 — 전부 공개합니다</summary>${calcHtml}</details>`);
 
-  /* ---- 계산 과정 (투명성) ---- */
-  let calcHtml = `<div class="badge badge-calc">계산 영역 — 100% 검증 가능</div>
-    <ul class="calc-log">${r.calcLog.map(l=>`<li>${l}</li>`).join("")}</ul>`;
-  if (r.warnings.length){
-    calcHtml += `<div class="warnings">${r.warnings.map(w=>`<div class="warning">⚠️ ${w}</div>`).join("")}</div>`;
+  /* ── 一: 본질 ── */
+  const st=strengthEstimate(P);
+  const ch1=chapter("一",`본질 — ${SEASON_NAMES[season]}의 ${dm.title}`,"해석",`
+    <p class="lede">${T(dm)}</p>
+    <p class="johu">🌡 <b>계절 처방</b> <small>(궁통보감 조후 요약)</small> — ${JOHU_HINT[STEM_ELEM[ds]][season]}</p>
+    <p><b>기운 세기</b> · ${st.label.replace("(참고)","")} <span class="tag">${st.detail.join("·")}</span><br>${T(STRENGTH_TEXT[st.label])}</p>
+    <p class="note">※ 신강약·용신의 정밀 판단은 격국 전체를 봐야 합니다 — 여기서는 참고치로만 드립니다. 이게 정직한 한계입니다.</p>`);
+
+  /* ── 二: 오행과 기질 ── */
+  const cnt=elementCount(P);
+  const total=Object.values(cnt).reduce((a,b)=>a+b,0);
+  let elemHtml=`<div class="elem-bars">`;
+  for(const e2 of ["목","화","토","금","수"]){
+    const pct=Math.round(cnt[e2]/total*100);
+    elemHtml+=`<div class="elem-row"><span class="elem-name" style="color:${ELEM_COLOR[e2]}">${e2} ${ELEM_KO[e2]}</span>
+      <div class="bar-track"><div class="bar" style="width:${Math.max(pct,3)}%;background:${ELEM_COLOR[e2]}"></div></div><span class="elem-cnt">${cnt[e2]}</span></div>`;
   }
+  elemHtml+=`</div>`;
+  const maxE=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+  const zeros=Object.entries(cnt).filter(([,v])=>v===0).map(([k])=>k);
+  let elemComment="";
+  if(maxE[1]>=3) elemComment+=`<p><b>${maxE[0]}(${ELEM_KO[maxE[0]]})이 많은 사주</b> — ${T(ELEM_TEXT_EXCESS[maxE[0]])}</p>`;
+  zeros.forEach(z=>{ elemComment+=`<p><b>${z}(${ELEM_KO[z]}) 없음</b> — ${T(ELEM_TEXT_LACK[z])}</p>`; });
+  const gods={};
+  for(const [key] of posOrder){ const p=P[key]; if(!p) continue;
+    if(key!=="day"){ const g1=tenGod(ds,p.stem); gods[g1]=(gods[g1]||0)+1; }
+    const g2=tenGodBranch(ds,p.branch); gods[g2]=(gods[g2]||0)+1; }
+  let godHtml=`<div class="god-chips">`;
+  Object.entries(gods).sort((a,b)=>b[1]-a[1]).forEach(([g,n])=>{ godHtml+=`<div class="chip"><b>${g}${n>1?" ×"+n:""}</b><span>${T(TEN_GOD_TEXT[g])}</span></div>`; });
+  godHtml+=`</div>`;
+  const ch2=chapter("二","오행과 기질","해석", elemHtml+`<div class="interp-block">${elemComment}</div>`+godHtml);
 
-  /* ---- 오행 ---- */
-  const cnt = elementCount(P);
-  const total = Object.values(cnt).reduce((a,b)=>a+b,0);
-  let elemHtml = `<div class="elem-bars">`;
-  for (const e of ["목","화","토","금","수"]){
-    const pct = Math.round(cnt[e]/total*100);
-    elemHtml += `<div class="elem-row"><span class="elem-name elem-${e}">${e}(${ELEM_KO[e]})</span>
-      <div class="bar-track"><div class="bar elem-bg-${e}" style="width:${Math.max(pct,3)}%"></div></div>
-      <span class="elem-cnt">${cnt[e]}</span></div>`;
-  }
-  elemHtml += `</div>`;
-  const maxE = Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
-  const zeros = Object.entries(cnt).filter(([,v])=>v===0).map(([k])=>k);
-  let elemComment = "";
-  if (maxE[1] >= 3) elemComment += `<p><b>${maxE[0]}(${ELEM_KO[maxE[0]]})이 많은 사주</b> — ${T(ELEM_TEXT_EXCESS[maxE[0]])}</p>`;
-  zeros.forEach(z=>{ elemComment += `<p><b>${z}(${ELEM_KO[z]}) 없음</b> — ${T(ELEM_TEXT_LACK[z])}</p>`; });
-
-  /* ---- 일간 + 조후 + 신강약 ---- */
-  const dm = DAY_MASTER_TEXT[STEMS[ds]];
-  const season = seasonOfMonthIdx(r.monthIdx);
-  const johu = JOHU_HINT[STEM_ELEM[ds]][season];
-  const st = strengthEstimate(P);
-  const interp1 = `
-    <div class="badge badge-interp">해석 영역 — 전통 통설 요약</div>
-    <div class="dm-card">
-      <div class="dm-emoji">${dm.emoji}</div>
-      <h3>나의 본질: ${gzKo(P.day)} — ${SEASON_NAMES[season]}의 ${dm.title}</h3>
-      <p>${T(dm)}</p>
-      <p class="johu">🌡 <b>계절 처방</b> (궁통보감 조후 요약): ${johu}</p>
-      <p class="strength"><b>기운 세기</b>: ${st.label.replace("(참고)","")} <span class="tag">${st.detail.join("·")}</span> — ${T(STRENGTH_TEXT[st.label])}</p>
-      <p class="note">※ 신강약·용신 정밀 판단은 격국 전체를 봐야 하므로 여기서는 '참고치'로만 표시합니다 — 이게 정직한 한계입니다.</p>
-    </div>`;
-
-  /* ---- 십성 구성 ---- */
-  const gods = {};
-  for (const [key] of posOrder){
-    const p = P[key]; if(!p) continue;
-    if (key!=="day"){ const g1 = tenGod(ds,p.stem); gods[g1]=(gods[g1]||0)+1; }
-    const g2 = tenGodBranch(ds,p.branch); gods[g2]=(gods[g2]||0)+1;
-  }
-  let godHtml = `<div class="god-chips">`;
-  Object.entries(gods).sort((a,b)=>b[1]-a[1]).forEach(([g,n])=>{
-    godHtml += `<div class="chip"><b>${g}${n>1?" ×"+n:""}</b><span>${T(TEN_GOD_TEXT[g])}</span></div>`;
-  });
-  godHtml += `</div>`;
-
-  /* ---- 신살 ---- */
-  const sals = shinsal(P, r.sajuYear);
-  let salHtml = `<div class="sal-list">`;
+  /* ── 三: 별자리 (신살) ── */
+  const sals=shinsal(P,r.sajuYear);
+  let salHtml="";
   sals.forEach(s=>{
-    const base = s.name.replace(/\(.*\)|\s×\d+/g,"").trim();
-    const key = Object.keys(SHINSAL_TEXT).find(k=>base.startsWith(k.replace(/\(.*\)/,"")))
-      || Object.keys(SHINSAL_TEXT).find(k=>s.name.startsWith(k));
-    const desc = key? T(SHINSAL_TEXT[key]) : "";
-    salHtml += `<div class="sal ${s.absent?'absent':''} ${s.good===false?'care':''}">
-      <b>${s.name}</b> <span class="where">${s.where}</span>
-      <p>${desc}${s.absent? " — 지금은 없지만 '언제 들어오는지'가 포인트예요.":""}</p></div>`;
+    const key=Object.keys(SHINSAL_TEXT).find(k=>s.name.startsWith(k.replace(/\(.*\)/,"")))||Object.keys(SHINSAL_TEXT).find(k=>s.name.startsWith(k));
+    salHtml+=`<div class="sal ${s.absent?'absent':''} ${s.good===false?'care':''}"><b>${s.name}</b> <span class="where">${s.where}</span><p>${key?T(SHINSAL_TEXT[key]):""}${s.absent?" — 지금은 없지만 '언제 들어오는지'가 포인트예요.":""}</p></div>`;
   });
-  salHtml += `</div><p class="note">※ 신살은 보조 지표입니다. 겁주는 도구가 아니라 관리 포인트로만 읽으세요.</p>`;
+  const ch3=chapter("三","타고난 별들 (신살)","해석", salHtml+`<p class="note">※ 신살은 보조 지표입니다. 겁주는 도구가 아니라 관리 포인트로만 읽으세요.</p>`);
 
-  /* ---- 대운 ---- */
-  const nowYear = new Date().getFullYear();
-  let luckHtml = `<div class="luck-strip">`;
+  /* ── 四: 대운 ── */
+  const nowYear=new Date().getFullYear();
+  let luckHtml=`<div class="luck-strip">`;
   r.luckPillars.forEach(lp=>{
-    const active = nowYear >= lp.startYear && nowYear < lp.startYear+10;
-    const sg = tenGod(ds, lp.stem), bg = tenGodBranch(ds, lp.branch);
-    luckHtml += `<div class="luck ${active?'active':''}">
-      <div class="l-age">${lp.startAge}세<br><span>${lp.startYear}~</span></div>
-      <div class="l-gz">${STEMS[lp.stem]}${BRANCHES[lp.branch]}</div>
-      <div class="l-god">${sg}·${bg}</div>
-    </div>`;
+    const active=nowYear>=lp.startYear&&nowYear<lp.startYear+10;
+    luckHtml+=`<div class="luck ${active?'active':''}"><div class="l-age">${lp.startAge}세<br><span>${lp.startYear}~</span></div><div class="l-gz">${STEMS[lp.stem]}${BRANCHES[lp.branch]}</div><div class="l-god">${tenGod(ds,lp.stem)}·${tenGodBranch(ds,lp.branch)}</div></div>`;
   });
-  luckHtml += `</div>
-  <p class="note">대운수 ${r.luckStart} · ${r.forward?"순행":"역행"} — 10년 단위로 삶의 배경 계절이 바뀝니다. 현재 대운이 하이라이트되어 있어요.</p>`;
+  luckHtml+=`</div>`;
+  const cur=r.luckPillars.find(lp=>nowYear>=lp.startYear&&nowYear<lp.startYear+10);
+  let curTxt="";
+  if(cur){ const g1=tenGod(ds,cur.stem);
+    curTxt=`<p><b>지금 대운(${STEMS[cur.stem]}${BRANCHES[cur.branch]}, ${cur.startAge}~${cur.startAge+9}세)</b>의 키워드는 <b>${g1}</b> — ${T(TEN_GOD_TEXT[g1])}. 10년 단위로 삶의 배경 계절이 바뀝니다.</p>`; }
+  const ch4=chapter("四","대운 — 십 년의 계절","계산", luckHtml+curTxt+`<p class="note">대운수 ${r.luckStart} · ${r.forward?"순행":"역행"} (절기 정밀 계산)</p>`);
 
-  /* ---- 올해·향후 세운 ---- */
-  const years = yearlyFortune(P, nowYear, 3);
-  let yearHtml = `<div class="year-cards">`;
-  years.forEach(yf=>{
-    yearHtml += `<div class="ycard">
-      <h4>${yf.year} ${STEMS[yf.stem]}${BRANCHES[yf.branch]}년</h4>
-      <p class="ygods">${yf.stemGod} · ${yf.branchGod}</p>
-      <p>${T(TEN_GOD_TEXT[yf.stemGod])}</p>
-      ${yf.events.map(e=>`<p class="yevent">✨ ${e}</p>`).join("")}
-    </div>`;
+  /* ── 五: 인연 (잠금) ── */
+  const iljiGod=tenGodBranch(ds,P.day.branch);
+  const iljiStage=twelveStage(ds,P.day.branch);
+  const hongranSal=sals.find(s=>s.name==="홍란·천희");
+  const years5=yearlyFortune(P,nowYear,5);
+  const bondYears=years5.filter(y=>y.events.some(e=>e.includes("합")||e.includes("인연")));
+  let loveHtml=`<p class="lede">${T(SPOUSE_PALACE_TEXT[iljiGod])}</p>
+    <p>배우자 자리의 기운은 <b>${iljiGod}</b>, 자리의 계절은 <b>${iljiStage}</b> — ${T(TWELVE_TEXT[iljiStage])}.</p>`;
+  if(hongranSal) loveHtml+=`<p>💮 <b>인연의 별</b>: 홍란은 <b>${BRANCHES_KO[hongranSal.hongran]}</b>, 천희는 <b>${BRANCHES_KO[hongranSal.cheonhui]}</b> — 이 글자가 오는 해·대운에 만남과 경사의 기운이 켜집니다.</p>`;
+  if(bondYears.length) loveHtml+=`<p>🔔 <b>앞으로 5년 중 인연이 움직이는 해</b>: ${bondYears.map(y=>`<b>${y.year}</b>`).join(", ")} — ${bondYears[0].events.find(e=>e.includes("합")||e.includes("인연"))||""}</p>`;
+  else loveHtml+=`<p>앞으로 5년은 인연 자리가 조용한 편 — 억지 타이밍보다 나를 채우는 시간으로 쓰기 좋은 구간입니다.</p>`;
+  const ch5=chapter("五","인연 — 배우자궁 풀이","해석", loveHtml, {locked:true});
+
+  /* ── 六: 재물 (잠금) ── */
+  const wealthGods=["정재","편재"];
+  let wCount=0, wKind={정재:0,편재:0};
+  for(const [key] of posOrder){ const p=P[key]; if(!p) continue;
+    if(key!=="day"){ const g1=tenGod(ds,p.stem); if(wealthGods.includes(g1)){wCount++;wKind[g1]++;} }
+    const g2=tenGodBranch(ds,p.branch); if(wealthGods.includes(g2)){wCount++;wKind[g2]++;} }
+  const wc=Math.min(wCount,3);
+  let wealthHtml=`<p class="lede">${T(WEALTH_COUNT_TEXT[wc])}</p>`;
+  const mainW=wKind["정재"]>=wKind["편재"]?"정재":"편재";
+  if(wCount>0) wealthHtml+=`<p>${T(WEALTH_STYLE[mainW])}</p>`;
+  const moneyYears=years5.filter(y=>wealthGods.includes(y.stemGod)||wealthGods.includes(y.branchGod));
+  if(moneyYears.length) wealthHtml+=`<p>💰 <b>앞으로 5년 중 돈이 움직이는 해</b>: ${moneyYears.map(y=>`<b>${y.year}</b>(${y.stemGod}·${y.branchGod})`).join(", ")} — 기회이자 지출이니, 이 해엔 '자동 저축'을 먼저 걸어두세요.</p>`;
+  wealthHtml+=`<p class="note">공통 처방: 동업·보증·큰돈 빌려주기는 사주 불문 최다 실패 경로입니다 — 특히 비겁이 강해지는 해에는요.</p>`;
+  const ch6=chapter("六","재물 — 나의 돈그릇","해석", wealthHtml, {locked:true});
+
+  /* ── 七: 오년의 달력 (잠금) ── */
+  let calHtml=`<div class="year-cards">`;
+  years5.forEach(yf=>{
+    calHtml+=`<div class="ycard"><h4>${yf.year} <span>${STEMS[yf.stem]}${BRANCHES[yf.branch]}</span></h4>
+      <p class="ygods">${yf.stemGod} · ${yf.branchGod}</p><p>${T(TEN_GOD_TEXT[yf.stemGod])}</p>
+      ${yf.events.map(e2=>`<p class="yevent">✨ ${e2}</p>`).join("")}</div>`;
   });
-  yearHtml += `</div>`;
+  calHtml+=`</div><p class="note">세운은 대운보다 신뢰도가 한 단계 낮은 것이 전통 통설입니다 — 큰 흐름은 대운으로, 해의 리듬은 세운으로 보세요.</p>`;
+  const ch7=chapter("七","오년의 달력","해석", calHtml, {locked:true});
 
-  /* ---- 조립 ---- */
-  el.innerHTML = `
-    <section class="card">
-      <h2>📜 나의 명식</h2>
-      ${pillarHtml}
-      <details class="calc-details" open><summary>이 명식이 나온 계산 과정 (전부 공개)</summary>${calcHtml}</details>
-    </section>
-    <section class="card">
-      <h2>🌗 오행 균형 <span class="badge badge-calc small">계산</span></h2>
-      ${elemHtml}
-      <div class="interp-block">${elemComment}</div>
-    </section>
-    <section class="card">${interp1}</section>
-    <section class="card">
-      <h2>🧩 내 안의 기운들 (십성) <span class="badge badge-interp small">해석</span></h2>
-      ${godHtml}
-    </section>
-    <section class="card">
-      <h2>⭐ 신살 <span class="badge badge-interp small">해석</span></h2>
-      ${salHtml}
-    </section>
-    <section class="card">
-      <h2>🛤 대운 — 10년 단위 흐름 <span class="badge badge-calc small">계산</span></h2>
-      ${luckHtml}
-    </section>
-    <section class="card">
-      <h2>📅 올해와 앞으로 <span class="badge badge-interp small">해석</span></h2>
-      ${yearHtml}
-    </section>
-    <section class="card share-card">
-      <h2>🔗 공유</h2>
-      <p>지금 주소(URL)를 복사하면 이 결과가 그대로 재현됩니다.</p>
-      <button id="copy-link" class="btn">결과 링크 복사</button>
-      <button id="copy-text" class="btn secondary">텍스트 요약 복사</button>
-    </section>
-    <section class="card premium">
-      <h2>💎 더 깊이 보기</h2>
-      ${PREMIUM_ITEMS.map(p=>`<div class="prem-item"><b>${p.name}</b> <span class="price">${p.price}</span><p>${p.desc}</p></div>`).join("")}
-      <p class="note">광고 없음 · 겁주기 없음 · 결제 유도 팝업 없음 — 기본 리딩은 언제나 무료입니다.</p>
+  el.innerHTML=cardHtml+`<div class="book">`+ch0+ch1+ch2+ch3+ch4+ch5+ch6+ch7+`</div>
+    <section class="chapter outro">
+      <p class="outro-line">계산은 여기까지가 사실이고, 해석은 여기까지가 전통입니다.<br>나머지는 당신이 씁니다.</p>
+      <button class="btn secondary" id="copy-text">텍스트 요약 복사</button>
     </section>`;
 
-  document.getElementById("copy-link").addEventListener("click", ()=>{
-    navigator.clipboard.writeText(location.href).then(()=>toast("링크를 복사했어요"));
+  document.querySelectorAll(".unlock-btn").forEach(b=>b.addEventListener("click",()=>{
+    const s=document.getElementById(b.dataset.target);
+    s.classList.remove("locked"); s.querySelector(".paywall").remove();
+    toast("열렸어요 — 오픈 기념 무료");
+  }));
+  document.getElementById("save-card").addEventListener("click",()=>drawTalisman(r,label,season,hapTitle,hapStem,motherElem));
+  document.getElementById("copy-link").addEventListener("click",()=>{
+    navigator.clipboard.writeText(location.href).then(()=>toast("링크를 복사했어요 — 붙여넣으면 이 결과가 그대로 열립니다"));
   });
-  document.getElementById("copy-text").addEventListener("click", ()=>{
-    const txt = `[맑은사주] ${r.input.year}.${r.input.month}.${r.input.day} ${r.input.hourUnknown?"(시간모름)":pad(r.input.hour)+":"+pad(r.input.minute)}
-명식: ${P.hour?gzKo(P.hour)+"시 ":""}${gzKo(P.day)}일 ${gzKo(P.month)}월 ${gzKo(P.year)}년
-일간: ${gzKo(P.day)} — ${SEASON_NAMES[season]}의 ${dm.title}
-${location.href}`;
+  document.getElementById("copy-text").addEventListener("click",()=>{
+    const txt=`[맑은사주] 나는 "${label}"\n명식: ${P.hour?gzKo(P.hour)+"시 ":""}${gzKo(P.day)}일 ${gzKo(P.month)}월 ${gzKo(P.year)}년\n합이 드는 상대: ${hapTitle}(${hapStem}) · 나를 채우는 기운: ${ELEM_KO[motherElem]}\n${location.href}`;
     navigator.clipboard.writeText(txt).then(()=>toast("요약을 복사했어요"));
+  });
+  updateProgress();
+}
+
+/* ── 부적 카드 이미지 (1080×1920 인스타 스토리) ── */
+function drawTalisman(r,label,season,hapTitle,hapStem,motherElem){
+  const P=r.pillars;
+  const c=document.createElement("canvas"); c.width=1080; c.height=1920;
+  const x=c.getContext("2d");
+  document.fonts.load('700 100px "Noto Serif KR"').then(()=>document.fonts.ready).then(()=>{
+    // 한지 배경
+    x.fillStyle="#f3ecdd"; x.fillRect(0,0,1080,1920);
+    // 미세 질감
+    for(let i=0;i<900;i++){ x.fillStyle=`rgba(120,100,70,${Math.random()*0.05})`; x.fillRect(Math.random()*1080,Math.random()*1920,2,2); }
+    // 이중 테두리 (부적 프레임)
+    x.strokeStyle="#b5493a"; x.lineWidth=10; x.strokeRect(50,50,980,1820);
+    x.lineWidth=3; x.strokeRect(80,80,920,1760);
+    // 상단
+    x.fillStyle="#8a7a5c"; x.font='500 40px "Noto Serif KR", serif'; x.textAlign="center";
+    x.fillText("四 柱 · "+SEASON_NAMES[season], 540, 220);
+    // 라벨 (핵심)
+    x.fillStyle="#241f18"; x.font='700 95px "Noto Serif KR", serif';
+    const words=label.split(" ");
+    let ly=460;
+    if(words.length>2){ x.fillText(words.slice(0,2).join(" "),540,ly); x.fillText(words.slice(2).join(" "),540,ly+130); ly+=130; }
+    else { x.fillText(label,540,ly+60); ly+=60; }
+    // 명식 세로 4주
+    const order=["year","month","day","hour"];
+    const startX=270, gap=180;
+    x.font='700 110px "Noto Serif KR", serif';
+    order.forEach((k,i)=>{
+      const p=P[k]; const cx=startX+i*gap;
+      if(!p){ x.fillStyle="#b3a88f"; x.fillText("—",cx,ly+320); x.fillText("—",cx,ly+460); return; }
+      x.fillStyle=ELEM_COLOR[STEM_ELEM[p.stem]]; x.fillText(STEMS[p.stem],cx,ly+320);
+      x.fillStyle=ELEM_COLOR[BRANCH_ELEM[p.branch]]; x.fillText(BRANCHES[p.branch],cx,ly+460);
+    });
+    x.fillStyle="#8a7a5c"; x.font='400 34px "Noto Serif KR", serif';
+    ["년","월","일","시"].forEach((t,i)=>x.fillText(t,startX+i*gap,ly+540));
+    // 구분선
+    x.strokeStyle="#c9b98f"; x.lineWidth=2;
+    x.beginPath(); x.moveTo(200,ly+620); x.lineTo(880,ly+620); x.stroke();
+    // 궁합 태그
+    x.fillStyle="#241f18"; x.font='500 44px "Noto Serif KR", serif';
+    x.fillText(`합이 드는 상대 · ${hapTitle}`, 540, ly+730);
+    x.fillText(`나를 채우는 기운 · ${ELEM_KO[motherElem]}`, 540, ly+810);
+    // 인장
+    x.fillStyle="#b5493a";
+    x.beginPath(); x.arc(540, 1650, 95, 0, Math.PI*2); x.fill();
+    x.fillStyle="#f3ecdd"; x.font='700 52px "Noto Serif KR", serif';
+    x.fillText("맑은",540,1635); x.fillText("사주",540,1695);
+    // URL
+    x.fillStyle="#8a7a5c"; x.font='400 30px "Noto Serif KR", serif';
+    x.fillText("malgeun-saju",540,1810);
+    c.toBlob(blob=>{
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob);
+      a.download=`맑은사주_${label.replace(/\s/g,"")}.png`;
+      a.click(); URL.revokeObjectURL(a.href);
+      toast("부적 카드를 저장했어요 — 스토리에 올려보세요");
+    },"image/png");
   });
 }
 
 function toast(msg){
-  const t = document.createElement("div");
-  t.className = "toast"; t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), 1800);
+  const t=document.createElement("div"); t.className="toast"; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2200);
 }
