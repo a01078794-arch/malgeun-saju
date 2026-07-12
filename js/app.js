@@ -12,7 +12,12 @@ const CITIES = [
 ];
 const ELEM_COLOR = {"목":"#5a7d5a","화":"#b5493a","토":"#c29a4b","금":"#8a8f98","수":"#4a6b8a"};
 
-let MODE = localStorage.getItem("sajuMode") || "easy";
+// localStorage는 file://·인앱브라우저·시크릿모드에서 예외를 던질 수 있음 — 안전 래퍼
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(_e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(_e){} }
+};
+let MODE = store.get("sajuMode") || "easy";
 let LAST = null;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -24,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("minute").disabled = e.target.checked;
   });
   document.querySelectorAll(".mode-btn").forEach(b=>b.addEventListener("click", ()=>{
-    MODE=b.dataset.mode; localStorage.setItem("sajuMode",MODE); updateModeButtons(); if(LAST) render(LAST);
+    MODE=b.dataset.mode; store.set("sajuMode",MODE); updateModeButtons(); if(LAST) render(LAST);
   }));
   updateModeButtons();
   window.addEventListener("scroll", updateProgress, {passive:true});
