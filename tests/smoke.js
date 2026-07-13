@@ -28,7 +28,7 @@ setTimeout(()=>{
   check("결과 렌더됨", !result.classList.contains("hidden"));
   check("부적 카드 존재", !!doc.getElementById("talisman"));
   const label = doc.querySelector(".tal-label");
-  check("캐릭터 라벨 = 새벽 이슬 (김민주 초봄생)", label && label.textContent==="새벽 이슬", label&&label.textContent);
+  check("캐릭터 라벨 = 새벽 이슬 (케이스B 초봄생)", label && label.textContent==="새벽 이슬", label&&label.textContent);
   // 챕터 8개 (序~七)
   const chapters = doc.querySelectorAll("#result .chapter");
   check("챕터 8개 렌더", doc.querySelectorAll("#result .book .chapter").length===8, String(doc.querySelectorAll("#result .book .chapter").length));

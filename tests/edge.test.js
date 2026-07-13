@@ -36,10 +36,10 @@ check("입춘 후 연주=癸酉", STEMS[r7.pillars.year.stem]+BRANCHES[r7.pillar
 check("입춘 ±48h 경고(2/3)", r6.warnings.some(w=>w.includes("입춘")));
 check("입춘 ±48h 경고(2/5)", r7.warnings.some(w=>w.includes("입춘")));
 
-// 5. 남성 순행: 김민주와 동일 사주 남성 → 순행 (양년생 남 = 순행)
+// 5. 남성 순행: 케이스B와 동일 사주 남성 → 순행 (양년생 남 = 순행)
 const r8=computeSaju({year:1994,month:2,day:26,hour:8,minute:30,gender:'M',longitude:127.5});
 check("양년생 남성=순행", r8.forward===true);
-check("음년생 여성=순행(전혜리)", computeSaju({year:1995,month:5,day:14,hour:15,minute:29,gender:'F',longitude:126.7}).forward===true);
+check("음년생 여성=순행(케이스C)", computeSaju({year:1995,month:5,day:14,hour:15,minute:29,gender:'F',longitude:126.7}).forward===true);
 
 // 6. 윤년 2월 29일
 const r9=computeSaju({year:2000,month:2,day:29,hour:10,minute:0,gender:'F',longitude:127.5});
