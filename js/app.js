@@ -238,12 +238,16 @@ function render(r){
   let loveHtml=`<p class="lede">${T(ssi)} ${T(SPOUSE_COUNT_TEXT[Math.min(spCount,3)])}</p>`;
   if(spWhere.length) loveHtml+=`<p>내 사주 속 배우자 기운: <b>${spWhere.join(" · ")}</b></p>`;
   loveHtml+=`<p><b>배우자 자리(일지) 풀이</b> — ${T(SPOUSE_PALACE_TEXT[iljiGod])}<br>자리의 계절은 <b>${iljiStage}</b>: ${T(TWELVE_TEXT[iljiStage])}.</p>`;
-  if(hongranSal) loveHtml+=`<p>💮 <b>인연의 별</b>: 홍란(만남)은 <b>${BRANCHES_KO[hongranSal.hongran]}</b>, 천희(경사)는 <b>${BRANCHES_KO[hongranSal.cheonhui]}</b> — 이 글자가 오는 해·대운에 인연 기운이 켜집니다.</p>`;
+  if(hongranSal){
+    const yrsFor=br=>{const out=[];for(let yy=nowYear;yy<nowYear+30&&out.length<3;yy++){if(((yy-4)%12+12)%12===br)out.push(yy);}return out;};
+    const hy=yrsFor(hongranSal.hongran), cy=yrsFor(hongranSal.cheonhui);
+    loveHtml+=`<p>💮 <b>인연의 별 — 언제 켜지나</b><br>· 만남·연애 기운(홍란 ${BRANCHES_KO[hongranSal.hongran]})이 도는 해: <b>${hy.join(" · ")}</b>년<br>· 경사·결혼·득자 기운(천희 ${BRANCHES_KO[hongranSal.cheonhui]})이 도는 해: <b>${cy.join(" · ")}</b>년<br><span class="note">이 해들에 인연·경사 기운이 상대적으로 강한 편이에요. 확정이 아니라 "기운이 켜지는 해" 참고용 — 그 해에 사람을 만나거나 좋은 일이 잘 겹치는 경향으로 보세요.</span></p>`;
+  }
   const bondYears=years5.filter(y=>y.events.some(e=>e.includes("합")||e.includes("인연"))||ssi.stars.includes(y.stemGod)||(hongranSal&&(y.branch===hongranSal.hongran||y.branch===hongranSal.cheonhui)));
   if(bondYears.length) loveHtml+=`<p>🔔 <b>앞으로 5년 중 인연이 움직이는 해</b>: ${bondYears.map(y=>`<b>${y.year}</b>`).join(", ")}</p>`;
   else loveHtml+=`<p>앞으로 5년은 인연 자리가 조용한 편 — 억지 타이밍보다 나를 채우는 시간으로 쓰기 좋은 구간입니다.</p>`;
   loveHtml+=`<p>🤝 <b>천간이 합하는 상대</b>: ${DAY_MASTER_TEXT[STEM_HAP[STEMS[ds]]].title}(${STEM_HAP[STEMS[ds]]}) 일간 — 처음 만나도 오래 안 듯 편안한 조합의 고전적 공식입니다.</p>`;
-  const ch5=chapter("五","배우자·인연운","해석", loveHtml, {locked:true});
+  const ch5=chapter("五","배우자·인연운","해석", loveHtml);
 
   /* ── 六: 재물 (잠금) ── */
   const wealthGods=["정재","편재"];
@@ -257,11 +261,9 @@ function render(r){
   if(wCount>0) wealthHtml+=`<p>${T(WEALTH_STYLE[mainW])}</p>`;
   const moneyYears=years5.filter(y=>wealthGods.includes(y.stemGod)||wealthGods.includes(y.branchGod));
   if(moneyYears.length) wealthHtml+=`<p>💰 <b>앞으로 5년 중 돈이 움직이는 해</b>: ${moneyYears.map(y=>`<b>${y.year}</b>(${y.stemGod}·${y.branchGod})`).join(", ")} — 기회이자 지출이니, 이 해엔 흐름을 미리 준비해두세요.</p>`;
-  // 구조·조건부 처방 (전원 동일 잔소리 제거 — 이 사주에 해당하는 것만)
-  structs.filter(s=>["재다신약","식신생재","상관생재","군겁쟁재","무재"].includes(s.key)).forEach(s=>{ wealthHtml+=`<p>💡 ${T(s)}</p>`; });
-  // WEALTH_STYLE이 이미 편재 저축을 다루므로 여기선 비겁(군겁쟁재) 경고만 — 중복 제거
+  // (돈그릇 구조 해석은 위 '오행·기질·구조'에서 다뤘으므로 여기선 반복하지 않고, 타이밍·관리 중심)
   conditionalNotes(P).filter(n=>n.tag==="돈·사람").forEach(n=>{ wealthHtml+=`<p class="note">${T(n)}</p>`; });
-  const ch6=chapter("六","재물 — 나의 돈그릇","해석", wealthHtml, {locked:true});
+  const ch6=chapter("六","재물 — 나의 돈그릇","해석", wealthHtml);
 
   /* ── 七: 신년운세 (올해 + 월별) ── */
   const thisYF=years5[0];
@@ -280,7 +282,7 @@ function render(r){
     mHtml+=`<div class="mcard ${rel.length?"mark":""}"><b>${MONTH_RANGE_LABEL[mi2]}</b><span class="mgz">${STEMS[ms]}${BRANCHES[mb]}</span><span class="mgod">${mg}${rel.join("")}</span><p>${MONTH_TIP[mg]}</p></div>`;
   }
   mHtml+=`</div><p class="note">월 경계는 절기 기준(날짜는 근사) · 💞=배우자궁과 합(관계·협력의 달) ⚡=배우자궁과 충(변동의 달)</p>`;
-  const ch7=chapter("七",`${nowYear} 신년운세 — 열두 달의 리듬`,"해석", nyHtml+mHtml, {locked:true});
+  const ch7=chapter("七",`${nowYear} 신년운세 — 열두 달의 리듬`,"해석", nyHtml+mHtml);
 
   /* ── 八: 직업·적성운 ── */
   const groupMap={"비견":"비겁","겁재":"비겁","식신":"식상","상관":"식상","편재":"재성","정재":"재성","편관":"관성","정관":"관성","편인":"인성","정인":"인성"};
@@ -289,12 +291,11 @@ function render(r){
   const domGroup=Object.entries(groupCnt).sort((a,b)=>b[1]-a[1])[0];
   const cg=CAREER_GROUP_TEXT[domGroup[0]];
   let carHtml=`<p class="lede">내 사주에서 가장 큰 기운은 <b>${domGroup[0]}</b>(${domGroup[1]}개) — 당신은 <b>"${cg.title}"</b> 유형입니다.</p><p>${T(cg)}</p>`;
-  // 구조가 직업 방향을 어떻게 좁히는지 (개인차)
-  structs.filter(s=>["관인상생","살인상생","식상제살","상관패인","상관견관","무인성","도식"].includes(s.key)).forEach(s=>{ carHtml+=`<p>🧭 ${T(s)}</p>`; });
+  // (십성 조합 구조는 위 '오행·기질·구조'에서 다뤘으므로 여기선 직군·신살 중심으로만)
   if(sals.find(s=>s.name.startsWith("현침"))) carHtml+=`<p>🪡 현침살 보유 — 정밀·분석·의료·기술 계열에 추가 가산점이 붙는 구조.</p>`;
   if(sals.find(s=>s.name.startsWith("화개"))) carHtml+=`<p>🎨 화개 보유 — 연구·예술·정신세계 쪽 깊이가 무기가 됩니다.</p>`;
   carHtml+=`<p><b>계절 처방과 연결하면</b> — ${JOHU_HINT[STEM_ELEM[ds]][season]}. 일과 환경을 고를 때 이 보약 기운을 곁에 두는 게 전통적 개운법입니다.</p>`;
-  const ch8=chapter("八","직업·적성 — 나의 쓰임","해석", carHtml, {locked:true});
+  const ch8=chapter("八","직업·적성 — 나의 쓰임","해석", carHtml);
 
   /* ── 九: 오년의 달력 (잠금) ── */
   let calHtml=`<div class="year-cards">`;
@@ -304,7 +305,7 @@ function render(r){
       ${yf.events.map(e2=>`<p class="yevent">✨ ${e2}</p>`).join("")}</div>`;
   });
   calHtml+=`</div><p class="note">세운은 대운보다 신뢰도가 한 단계 낮은 것이 전통 통설입니다 — 큰 흐름은 대운으로, 해의 리듬은 세운으로 보세요.</p>`;
-  const ch9=chapter("九","오년의 달력","해석", calHtml, {locked:true});
+  const ch9=chapter("九","오년의 달력","해석", calHtml);
 
   const tips=actionTips(P);
   const tipsHtml=`<section class="chapter tips-block">

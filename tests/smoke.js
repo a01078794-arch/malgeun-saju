@@ -32,9 +32,9 @@ setTimeout(()=>{
   // 챕터 10개 (序~九)
   const chapters = doc.querySelectorAll("#result .chapter");
   check("챕터 10개 렌더", doc.querySelectorAll("#result .book .chapter").length===10, String(doc.querySelectorAll("#result .book .chapter").length));
-  // 잠금 5개 (五·六·七·八·九)
+  // 잠금 없음 (전부 무료 오픈 — 유료 특별함은 Claude 심층 리포트)
   const locked = doc.querySelectorAll("#result .chapter.locked");
-  check("잠금 챕터 5개", locked.length===5, String(locked.length));
+  check("잠금 챕터 0개 (전부 오픈)", locked.length===0, String(locked.length));
   // 명식 글자 확인 (甲戌 丙寅 癸未 丙辰)
   const chars = [...doc.querySelectorAll("#ch-序 .p-char")].map(e=>e.textContent).join("");
   check("명식 글자 정확 (丙辰癸未丙寅甲戌 순)", chars==="丙辰癸未丙寅甲戌", chars);
@@ -43,10 +43,10 @@ setTimeout(()=>{
   // 대화 패널 렌더 (chat.js) — mountSajuChat이 buildChartText 실행 후 패널 부착
   check("대화 패널 렌더", !!doc.getElementById("saju-chat") && !!doc.getElementById("chat-input"));
   check("대화 추천질문 버튼", doc.querySelectorAll("#saju-chat .chat-suggest button").length>=3, String(doc.querySelectorAll("#saju-chat .chat-suggest button").length));
-  // 잠금 해제 동작
-  const btn = doc.querySelector(".unlock-btn");
-  btn.click();
-  check("잠금 해제 동작", doc.querySelectorAll("#result .chapter.locked").length===4);
+  // 심층 리포트 버튼 존재 (유료 특별 = Claude 리포트)
+  check("심층 리포트 버튼 존재", !!doc.getElementById("report-go"));
+  // 인연의 별 = 연도 표시 (배우자 챕터에 '년' 포함)
+  check("인연운 연도 표기", /인연의 별 — 언제 켜지나/.test(doc.getElementById("ch-五")?.innerHTML||""));
   // 링크 복사 버튼 존재
   check("공유 버튼 2종", !!doc.getElementById("copy-link") && !!doc.getElementById("save-card"));
   // 모드 토글: expert로 바꾸면 텍스트 변경
