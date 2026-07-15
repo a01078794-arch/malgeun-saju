@@ -100,6 +100,12 @@ window.mountSajuChat = function (r) {
   const box = el("section", "chat-box");
   box.id = "saju-chat";
   box.innerHTML = `
+    <div class="report-cta">
+      <h2 class="report-title">✨ 나만의 심층 리포트</h2>
+      <p class="report-sub">계산된 내 사주를 <b>쉬운 말로 길게</b> 풀어드려요 — 성격·일·돈·인연·올해 흐름 + 실천 조언까지. <del>990원</del> <b>오픈 기념 무료</b></p>
+      <button class="btn" id="report-go">내 심층 리포트 받기</button>
+      <div id="report-out" class="report-out"></div>
+    </div>
     <div class="chat-head"><span class="ch-no">問</span><h2>사주에게 물어보기</h2>
       <span class="badge badge-interp">대화</span></div>
     <p class="chat-note">계산된 내 사주에 근거해 답합니다. 해석은 전통 통설 참고용이에요.</p>
@@ -151,6 +157,7 @@ window.mountSajuChat = function (r) {
     box.querySelector("#compat-form").classList.toggle("hidden");
   });
   box.querySelector("#compat-go").addEventListener("click", submitCompat);
+  box.querySelector("#report-go").addEventListener("click", generateReport);
 
   if (!WORKER_URL) {
     addMsg("assistant", "사주에게 직접 물어보는 대화 기능을 준비 중이에요 🙏 곧 열립니다.");
@@ -247,6 +254,53 @@ async function streamChat(question, holder) {
   } finally {
     if (sendBtn) sendBtn.disabled = false;
   }
+}
+
+/* ---- 심층 리포트 (Claude 생성, 쉬운 말·긴 글·조언) ---- */
+async function generateReport() {
+  const btn = document.getElementById("report-go");
+  const out = document.getElementById("report-out");
+  if (!WORKER_URL) { out.innerHTML = '<p class="report-note">리포트 기능 준비 중이에요 🙏</p>'; return; }
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.textContent = "리포트 쓰는 중… (20초쯤 걸려요)";
+  out.innerHTML = '<p class="typing" style="padding:14px 2px">✍️ 당신의 사주를 읽고 쓰는 중이에요…</p>';
+  try {
+    const resp = await fetch(WORKER_URL, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode: "report", chartText: buildChartText(MY_R) }),
+    });
+    let data = null; try { data = await resp.json(); } catch { data = null; }
+    if (!resp.ok || !data || data.error) {
+      out.innerHTML = '<p class="report-note">⚠️ ' + escapeHtml(String((data && (data.detail || data.error)) || ("오류 " + resp.status)).slice(0, 200)) + '</p>';
+      return;
+    }
+    out.innerHTML = mdToHtml(String(data.text || ""));
+  } catch (e) {
+    out.innerHTML = '<p class="report-note">⚠️ 연결 실패: ' + escapeHtml(String(e && e.message || e)) + '</p>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = out.innerHTML && !out.querySelector(".report-note") ? "리포트 다시 받기" : label;
+  }
+}
+
+/* 아주 작은 마크다운 렌더 (제목·목록·굵게·구분선) */
+function mdToHtml(md) {
+  const inline = s => escapeHtml(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  let html = "", inList = false;
+  const closeList = () => { if (inList) { html += "</ul>"; inList = false; } };
+  for (const raw of String(md).split("\n")) {
+    const line = raw.replace(/\s+$/, "");
+    if (/^###\s+/.test(line)) { closeList(); html += "<h5>" + inline(line.replace(/^###\s+/, "")) + "</h5>"; }
+    else if (/^##\s+/.test(line)) { closeList(); html += "<h4>" + inline(line.replace(/^##\s+/, "")) + "</h4>"; }
+    else if (/^#\s+/.test(line)) { closeList(); html += "<h3>" + inline(line.replace(/^#\s+/, "")) + "</h3>"; }
+    else if (/^[-*]\s+/.test(line)) { if (!inList) { html += "<ul>"; inList = true; } html += "<li>" + inline(line.replace(/^[-*]\s+/, "")) + "</li>"; }
+    else if (/^---+$/.test(line)) { closeList(); html += "<hr>"; }
+    else if (line.trim() === "") { closeList(); }
+    else { closeList(); html += "<p>" + inline(line) + "</p>"; }
+  }
+  closeList();
+  return html;
 }
 
 function escapeHtml(s) {
