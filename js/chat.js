@@ -1,12 +1,13 @@
 /* 맑은사주 — 대화 UI (Claude 백엔드 연동)
  *
- * 계산된 사주를 근거 텍스트로 만들어 워커로 보내고, 답변을 스트리밍으로 표시한다.
- * 백엔드는 worker/ 폴더의 Cloudflare Worker. 아래 WORKER_URL만 배포 후 채워주면 켜진다.
+ * 계산된 사주를 근거 텍스트로 만들어 백엔드로 보내고, 답변(JSON {text})을 표시한다.
+ * 백엔드는 chat-backend/ 의 Vercel Node 서버리스 함수(AWS egress → Anthropic).
+ * (Cloudflare Workers는 Anthropic이 egress를 403으로 막아 Vercel로 이전함.)
  */
 "use strict";
 
-// ⬇️ 워커 배포 후 URL을 넣으세요 (worker/README.md 참고). 비워두면 대화창은 "준비 중"으로 표시됨.
-const WORKER_URL = "";
+// 대화 백엔드 URL (Vercel Node 서버리스 — chat-backend/ 참고). 비우면 대화창은 "준비 중".
+const WORKER_URL = "https://saju-chat-vercel.vercel.app/api/chat";
 
 let CHAT_HISTORY = [];   // {role, content}
 let CHAT_CTX = "";       // 근거 사주 텍스트
@@ -115,52 +116,28 @@ function submitChat(text) {
 async function streamChat(question, holder) {
   const sendBtn = document.getElementById("chat-send");
   if (sendBtn) sendBtn.disabled = true;
-  let acc = "";
   try {
     const resp = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ chartText: CHAT_CTX, question, history: CHAT_HISTORY }),
     });
-    if (!resp.ok || !resp.body) {
-      const t = await resp.text().catch(() => "");
-      holder.innerHTML = "⚠️ 오류: " + escapeHtml(t.slice(0, 200) || ("HTTP " + resp.status));
+    let data = null;
+    try { data = await resp.json(); } catch { data = null; }
+    if (!resp.ok || !data || data.error) {
+      const msg = (data && (data.detail || data.error)) || ("HTTP " + resp.status);
+      holder.innerHTML = "⚠️ 오류: " + escapeHtml(String(msg).slice(0, 200));
       return;
     }
-    const reader = resp.body.getReader();
-    const dec = new TextDecoder();
-    let buf = "";
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      const parts = buf.split("\n");
-      buf = parts.pop();
-      for (const line of parts) {
-        const s = line.trim();
-        if (!s.startsWith("data:")) continue;
-        const payload = s.slice(5).trim();
-        if (!payload || payload === "[DONE]") continue;
-        let ev;
-        try { ev = JSON.parse(payload); } catch { continue; }
-        if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") {
-          acc += ev.delta.text;
-          holder.innerHTML = escapeHtml(acc);
-          const log = document.getElementById("chat-log");
-          if (log) log.scrollTop = log.scrollHeight;
-        } else if (ev.type === "message_delta" && ev.delta && ev.delta.stop_reason === "refusal") {
-          if (!acc) holder.innerHTML = "이 질문에는 답변을 드리기 어려워요. 사주 상담 범위에서 다시 물어봐 주세요.";
-        } else if (ev.type === "error") {
-          holder.innerHTML = "⚠️ 서버 오류: " + escapeHtml((ev.error && ev.error.message) || "unknown");
-        }
-      }
-    }
-    if (!acc) holder.innerHTML = "(응답이 비어 있어요. 다시 시도해 주세요.)";
-    else {
+    const text = String(data.text || "").trim();
+    holder.innerHTML = escapeHtml(text || "(응답이 비어 있어요. 다시 시도해 주세요.)");
+    if (text) {
       CHAT_HISTORY.push({ role: "user", content: question });
-      CHAT_HISTORY.push({ role: "assistant", content: acc });
+      CHAT_HISTORY.push({ role: "assistant", content: text });
       if (CHAT_HISTORY.length > 12) CHAT_HISTORY = CHAT_HISTORY.slice(-12);
     }
+    const log = document.getElementById("chat-log");
+    if (log) log.scrollTop = log.scrollHeight;
   } catch (e) {
     holder.innerHTML = "⚠️ 연결 실패: " + escapeHtml(String(e && e.message || e));
   } finally {
