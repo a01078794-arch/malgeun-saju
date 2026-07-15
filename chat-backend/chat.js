@@ -83,13 +83,17 @@ ${chartText}
 (따뜻한 격려 한 단락 + 정직한 한계 한 줄)`;
 }
 
-// 이벤트를 기록 저장소(구글 시트 웹훅 등)로 전송. LOG_URL 미설정이면 아무것도 안 함.
+// 이벤트를 Vercel Blob(private)에 이벤트당 파일 1개로 저장. 관리자 페이지에서 조회.
 async function logEvent(payload) {
-  const url = process.env.LOG_URL;
-  if (!url) return;
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return "no-token";
   try {
-    await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
-  } catch (_e) { /* 로깅 실패는 서비스에 영향 없음 */ }
+    const { put } = await import("@vercel/blob");
+    const id = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+    await put(`logs/${id}.json`, JSON.stringify(payload), {
+      access: "private", contentType: "application/json", addRandomSuffix: false,
+    });
+    return null;
+  } catch (e) { return String((e && e.message) || e); }
 }
 
 export default async function handler(req, res) {
@@ -105,8 +109,8 @@ export default async function handler(req, res) {
 
   // 기록 모드: 클라이언트 이벤트(사주 조회 등)를 시트로만 남기고 종료
   if (body.mode === "log") {
-    await logEvent({ ...(body.event || {}), ts: new Date().toISOString() });
-    res.status(200).json({ ok: true });
+    const err = await logEvent({ ...(body.event || {}), ts: new Date().toISOString() });
+    res.status(200).json({ ok: !err, err: err || undefined });
     return;
   }
 
