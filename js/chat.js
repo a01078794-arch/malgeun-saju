@@ -92,6 +92,7 @@ window.mountSajuChat = function (r) {
   CHAT_HISTORY = [];
   MY_R = r;
   CHAT_CTX = buildChartText(r);
+  logSaju(r, "사주조회");
   const host = document.getElementById("result");
   if (!host) return;
   const old = document.getElementById("saju-chat");
@@ -181,6 +182,7 @@ function submitCompat() {
   let pR;
   try { pR = computeSaju(input); } catch (e) { alert("계산 오류: " + (e.message || e)); return; }
 
+  logSaju(pR, "궁합상대");
   CHAT_CTX = buildCompatText(MY_R, pR);
   CHAT_HISTORY = [];
   box.querySelector("#compat-form").classList.add("hidden");
@@ -301,6 +303,22 @@ function mdToHtml(md) {
   }
   closeList();
   return html;
+}
+
+/* ---- 이용 기록 (조회·궁합) beacon ---- */
+function logSaju(r, type) {
+  if (!WORKER_URL) return;
+  const i = r.input || {}, P = r.pillars;
+  const gz = k => P[k] ? STEMS[P[k].stem] + BRANCHES[P[k].branch] : "";
+  const ev = {
+    type: type || "사주조회",
+    생년월일: `${i.year}-${String(i.month).padStart(2, "0")}-${String(i.day).padStart(2, "0")}`,
+    시: i.hourUnknown ? "모름" : (String(i.hour).padStart(2, "0") + ":" + String(i.minute || 0).padStart(2, "0")),
+    성별: i.gender === "M" ? "남" : "여",
+    지역: i.placeName || "",
+    명식: `${gz("year")} ${gz("month")} ${gz("day")} ${gz("hour")}`,
+  };
+  try { fetch(WORKER_URL, { method: "POST", headers: { "content-type": "application/json" }, keepalive: true, body: JSON.stringify({ mode: "log", event: ev }) }); } catch (_e) {}
 }
 
 function escapeHtml(s) {

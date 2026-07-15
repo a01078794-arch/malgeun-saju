@@ -83,6 +83,15 @@ ${chartText}
 (따뜻한 격려 한 단락 + 정직한 한계 한 줄)`;
 }
 
+// 이벤트를 기록 저장소(구글 시트 웹훅 등)로 전송. LOG_URL 미설정이면 아무것도 안 함.
+async function logEvent(payload) {
+  const url = process.env.LOG_URL;
+  if (!url) return;
+  try {
+    await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+  } catch (_e) { /* 로깅 실패는 서비스에 영향 없음 */ }
+}
+
 export default async function handler(req, res) {
   const origin = process.env.ALLOW_ORIGIN || DEFAULT_ORIGIN;
   cors(res, origin);
@@ -93,6 +102,13 @@ export default async function handler(req, res) {
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
   body = body || {};
+
+  // 기록 모드: 클라이언트 이벤트(사주 조회 등)를 시트로만 남기고 종료
+  if (body.mode === "log") {
+    await logEvent({ ...(body.event || {}), ts: new Date().toISOString() });
+    res.status(200).json({ ok: true });
+    return;
+  }
 
   const mode = body.mode === "report" ? "report" : "chat";
   const chartText = String(body.chartText || "").slice(0, 6000);
@@ -115,6 +131,9 @@ export default async function handler(req, res) {
     messages = [...history, { role: "user", content: question }];
     maxTokens = 1500;
   }
+
+  // 질문·리포트 요청 기록
+  await logEvent({ type: mode, question: mode === "report" ? "[심층리포트]" : String(body.question || "").slice(0, 300), chart: chartText.slice(0, 200), ts: new Date().toISOString() });
 
   let upstream;
   try {
