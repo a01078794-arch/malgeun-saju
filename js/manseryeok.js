@@ -279,11 +279,12 @@ function strengthEstimate(pillars){
   let score = 0, detail=[];
   if (helps(wolji)) { score+=2; detail.push("득령"); } else detail.push("실령");
   if (helps(ilji)) { score+=1; detail.push("득지"); }
+  // 득세: 일간(자기 자신)을 제외한 모든 글자 중 나를 돕는(같은 오행+생하는 오행) 비율.
+  // 일간 천간은 분모/분자에서 제외, 일지 포함(궁의 뿌리 반영). 규칙 고정 — 재현성 보장.
   let cnt=0, total=0;
   for (const key of ["year","month","day","hour"]){
     const p = pillars[key]; if(!p) continue;
-    if (key!=="day" || true){ /* count all 8 glyphs incl day stem? exclude day stem */ }
-    if (!(key==="day")) { if(helps(STEM_ELEM[p.stem])) cnt++; total++; }
+    if (key!=="day"){ if(helps(STEM_ELEM[p.stem])) cnt++; total++; }
     if (helps(BRANCH_ELEM[p.branch])) cnt++; total++;
   }
   if (cnt >= Math.ceil(total/2)) { score+=1; detail.push("득세"); }

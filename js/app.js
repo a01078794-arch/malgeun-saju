@@ -160,13 +160,13 @@ function render(r){
   const ch0=chapter("序","나의 명식","계산",
     pillarHtml+`<details class="calc-details"><summary>이 명식이 나온 계산 과정 — 전부 공개합니다</summary>${calcHtml}</details>`);
 
-  /* ── 一: 본질 ── */
+  /* ── 一: 본질 (일간×계절×강약·통근×대표구조 조합) ── */
   const st=strengthEstimate(P);
-  const ch1=chapter("一",`본질 — ${SEASON_NAMES[season]}의 ${dm.title}`,"해석",`
-    <p class="lede">${T(dm)}</p>
-    <p class="johu">🌡 <b>계절 처방</b> <small>(궁통보감 조후 요약)</small> — ${JOHU_HINT[STEM_ELEM[ds]][season]}</p>
-    <p><b>기운 세기</b> · ${st.label.replace("(참고)","")} <span class="tag">${st.detail.join("·")}</span><br>${T(STRENGTH_TEXT[st.label])}</p>
-    <p class="note">※ 신강약·용신의 정밀 판단은 격국 전체를 봐야 합니다 — 여기서는 참고치로만 드립니다. 이게 정직한 한계입니다.</p>`);
+  const ess=composeEssence(r);
+  const ch1=chapter("一",`본질 — ${ess.title}`,"해석",
+    ess.frags.map((f,i)=>`<p class="${i===0?"lede":i===1?"johu":""}">${T(f)}</p>`).join("")
+    + `<p><b>기운 세기</b> · ${st.label.replace("(참고)","")} <span class="tag">${st.detail.join("·")}</span> — ${T(STRENGTH_TEXT[st.label])}</p>`
+    + `<p class="note">※ 신강약·용신의 정밀 판단은 격국 전체를 봐야 합니다 — 여기서는 참고치로만 드립니다. 이게 정직한 한계입니다.</p>`);
 
   /* ── 二: 오행과 기질 ── */
   const cnt=elementCount(P);
@@ -190,7 +190,13 @@ function render(r){
   let godHtml=`<div class="god-chips">`;
   Object.entries(gods).sort((a,b)=>b[1]-a[1]).forEach(([g,n])=>{ godHtml+=`<div class="chip"><b>${g}${n>1?" ×"+n:""}</b><span>${T(TEN_GOD_TEXT[g])}</span></div>`; });
   godHtml+=`</div>`;
-  const ch2=chapter("二","오행과 기질","해석", elemHtml+`<div class="interp-block">${elemComment}</div>`+godHtml);
+  // 십성 조합 구조 + 글자끼리의 관계 (개인차의 핵심 — 실제 글자·자리 기준)
+  const structs=godStructures(P);
+  const relAll=[...stemRelations(P), ...branchRelations(P)];
+  let structHtml="";
+  if(structs.length) structHtml+=`<div class="struct-block"><h4>내 사주의 구조</h4>`+structs.slice(0,3).map(s=>`<p class="struct">🔑 ${T(s)}</p>`).join("")+`</div>`;
+  if(relAll.length) structHtml+=`<div class="rel-block"><h4>글자끼리의 관계 (합·충·형)</h4>`+relAll.slice(0,5).map(x=>`<p class="rel">${T(x)}</p>`).join("")+`</div>`;
+  const ch2=chapter("二","오행·기질·구조","해석", elemHtml+`<div class="interp-block">${elemComment}</div>`+godHtml+structHtml);
 
   /* ── 三: 별자리 (신살) ── */
   const sals=shinsal(P,r.sajuYear);
@@ -249,8 +255,11 @@ function render(r){
   const mainW=wKind["정재"]>=wKind["편재"]?"정재":"편재";
   if(wCount>0) wealthHtml+=`<p>${T(WEALTH_STYLE[mainW])}</p>`;
   const moneyYears=years5.filter(y=>wealthGods.includes(y.stemGod)||wealthGods.includes(y.branchGod));
-  if(moneyYears.length) wealthHtml+=`<p>💰 <b>앞으로 5년 중 돈이 움직이는 해</b>: ${moneyYears.map(y=>`<b>${y.year}</b>(${y.stemGod}·${y.branchGod})`).join(", ")} — 기회이자 지출이니, 이 해엔 '자동 저축'을 먼저 걸어두세요.</p>`;
-  wealthHtml+=`<p class="note">공통 처방: 동업·보증·큰돈 빌려주기는 사주 불문 최다 실패 경로입니다 — 특히 비겁이 강해지는 해에는요.</p>`;
+  if(moneyYears.length) wealthHtml+=`<p>💰 <b>앞으로 5년 중 돈이 움직이는 해</b>: ${moneyYears.map(y=>`<b>${y.year}</b>(${y.stemGod}·${y.branchGod})`).join(", ")} — 기회이자 지출이니, 이 해엔 흐름을 미리 준비해두세요.</p>`;
+  // 구조·조건부 처방 (전원 동일 잔소리 제거 — 이 사주에 해당하는 것만)
+  structs.filter(s=>["재다신약","식신생재","상관생재","군겁쟁재","무재"].includes(s.key)).forEach(s=>{ wealthHtml+=`<p>💡 ${T(s)}</p>`; });
+  // WEALTH_STYLE이 이미 편재 저축을 다루므로 여기선 비겁(군겁쟁재) 경고만 — 중복 제거
+  conditionalNotes(P).filter(n=>n.tag==="돈·사람").forEach(n=>{ wealthHtml+=`<p class="note">${T(n)}</p>`; });
   const ch6=chapter("六","재물 — 나의 돈그릇","해석", wealthHtml, {locked:true});
 
   /* ── 七: 신년운세 (올해 + 월별) ── */
@@ -279,6 +288,8 @@ function render(r){
   const domGroup=Object.entries(groupCnt).sort((a,b)=>b[1]-a[1])[0];
   const cg=CAREER_GROUP_TEXT[domGroup[0]];
   let carHtml=`<p class="lede">내 사주에서 가장 큰 기운은 <b>${domGroup[0]}</b>(${domGroup[1]}개) — 당신은 <b>"${cg.title}"</b> 유형입니다.</p><p>${T(cg)}</p>`;
+  // 구조가 직업 방향을 어떻게 좁히는지 (개인차)
+  structs.filter(s=>["관인상생","살인상생","식상제살","상관패인","상관견관","무인성","도식"].includes(s.key)).forEach(s=>{ carHtml+=`<p>🧭 ${T(s)}</p>`; });
   if(sals.find(s=>s.name.startsWith("현침"))) carHtml+=`<p>🪡 현침살 보유 — 정밀·분석·의료·기술 계열에 추가 가산점이 붙는 구조.</p>`;
   if(sals.find(s=>s.name.startsWith("화개"))) carHtml+=`<p>🎨 화개 보유 — 연구·예술·정신세계 쪽 깊이가 무기가 됩니다.</p>`;
   carHtml+=`<p><b>계절 처방과 연결하면</b> — ${JOHU_HINT[STEM_ELEM[ds]][season]}. 일과 환경을 고를 때 이 보약 기운을 곁에 두는 게 전통적 개운법입니다.</p>`;

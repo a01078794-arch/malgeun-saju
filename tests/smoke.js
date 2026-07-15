@@ -16,7 +16,7 @@ let failures = [];
 function check(name, cond, detail){ console.log((cond?"[PASS] ":"[FAIL] ")+name+(cond?"":" — "+(detail||""))); if(!cond) failures.push(name); }
 
 {
-  window.eval(["js/manseryeok.js","js/data.js","js/app.js"].map(f=>fs.readFileSync(path.join(ROOT,f),"utf8").replace(/"use strict";/g,"")).join("\n"));
+  window.eval(["js/manseryeok.js","js/data.js","js/interp.js","js/app.js"].map(f=>fs.readFileSync(path.join(ROOT,f),"utf8").replace(/"use strict";/g,"")).join("\n"));
 }
 // DOMContentLoaded 발화
 window.document.dispatchEvent(new window.Event("DOMContentLoaded", {bubbles:true}));
@@ -29,12 +29,12 @@ setTimeout(()=>{
   check("부적 카드 존재", !!doc.getElementById("talisman"));
   const label = doc.querySelector(".tal-label");
   check("캐릭터 라벨 = 새벽 이슬 (케이스B 초봄생)", label && label.textContent==="새벽 이슬", label&&label.textContent);
-  // 챕터 8개 (序~七)
+  // 챕터 10개 (序~九)
   const chapters = doc.querySelectorAll("#result .chapter");
-  check("챕터 8개 렌더", doc.querySelectorAll("#result .book .chapter").length===8, String(doc.querySelectorAll("#result .book .chapter").length));
-  // 잠금 3개
+  check("챕터 10개 렌더", doc.querySelectorAll("#result .book .chapter").length===10, String(doc.querySelectorAll("#result .book .chapter").length));
+  // 잠금 5개 (五·六·七·八·九)
   const locked = doc.querySelectorAll("#result .chapter.locked");
-  check("잠금 챕터 3개", locked.length===3, String(locked.length));
+  check("잠금 챕터 5개", locked.length===5, String(locked.length));
   // 명식 글자 확인 (甲戌 丙寅 癸未 丙辰)
   const chars = [...doc.querySelectorAll("#ch-序 .p-char")].map(e=>e.textContent).join("");
   check("명식 글자 정확 (丙辰癸未丙寅甲戌 순)", chars==="丙辰癸未丙寅甲戌", chars);
@@ -43,7 +43,7 @@ setTimeout(()=>{
   // 잠금 해제 동작
   const btn = doc.querySelector(".unlock-btn");
   btn.click();
-  check("잠금 해제 동작", doc.querySelectorAll("#result .chapter.locked").length===2);
+  check("잠금 해제 동작", doc.querySelectorAll("#result .chapter.locked").length===4);
   // 링크 복사 버튼 존재
   check("공유 버튼 2종", !!doc.getElementById("copy-link") && !!doc.getElementById("save-card"));
   // 모드 토글: expert로 바꾸면 텍스트 변경
