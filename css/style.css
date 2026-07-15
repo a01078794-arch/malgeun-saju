@@ -199,3 +199,15 @@ footer{text-align:center; color:var(--ink-dim); font-size:.74rem; margin-top:36p
 .chat-suggest{display:flex; flex-wrap:wrap; gap:7px; margin-top:12px;}
 .chat-suggest button{background:#fffdf7; border:1px solid var(--line); color:var(--ink-soft); font-size:.78rem; padding:6px 11px; border-radius:14px; cursor:pointer; font-family:inherit;}
 .chat-suggest button:hover{border-color:var(--ok); color:var(--ok);}
+
+/* 궁합 폼 */
+.chat-compat{margin-top:14px; border-top:1px solid var(--line-soft); padding-top:14px;}
+#compat-toggle{width:100%; font-size:15px; padding:12px;}
+.compat-form{margin-top:12px; background:#fffdf7; border:1px solid var(--line); border-radius:8px; padding:14px;}
+.compat-note{font-size:.82rem; color:var(--ink-dim); margin-bottom:10px;}
+.compat-fields{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
+.compat-fields input, .compat-fields select{padding:11px 12px; min-height:46px; border:1.5px solid var(--line); border-radius:7px; font-size:16px; background:#fff; color:var(--ink); font-family:inherit;}
+.compat-fields input{width:88px;}
+.compat-fields select{flex:1 1 110px; min-width:0;}
+.compat-fields input:focus, .compat-fields select:focus{outline:none; border-color:var(--ok);}
+#compat-go{width:100%; padding:13px; font-size:15px;}
