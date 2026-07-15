@@ -16,7 +16,7 @@ let failures = [];
 function check(name, cond, detail){ console.log((cond?"[PASS] ":"[FAIL] ")+name+(cond?"":" — "+(detail||""))); if(!cond) failures.push(name); }
 
 {
-  window.eval(["js/manseryeok.js","js/data.js","js/interp.js","js/app.js"].map(f=>fs.readFileSync(path.join(ROOT,f),"utf8").replace(/"use strict";/g,"")).join("\n"));
+  window.eval(["js/manseryeok.js","js/data.js","js/interp.js","js/chat.js","js/app.js"].map(f=>fs.readFileSync(path.join(ROOT,f),"utf8").replace(/"use strict";/g,"")).join("\n"));
 }
 // DOMContentLoaded 발화
 window.document.dispatchEvent(new window.Event("DOMContentLoaded", {bubbles:true}));
@@ -40,6 +40,9 @@ setTimeout(()=>{
   check("명식 글자 정확 (丙辰癸未丙寅甲戌 순)", chars==="丙辰癸未丙寅甲戌", chars);
   // 계산 로그 공개
   check("계산 과정 공개", doc.querySelectorAll(".calc-log li").length>=2);
+  // 대화 패널 렌더 (chat.js) — mountSajuChat이 buildChartText 실행 후 패널 부착
+  check("대화 패널 렌더", !!doc.getElementById("saju-chat") && !!doc.getElementById("chat-input"));
+  check("대화 추천질문 버튼", doc.querySelectorAll("#saju-chat .chat-suggest button").length>=3, String(doc.querySelectorAll("#saju-chat .chat-suggest button").length));
   // 잠금 해제 동작
   const btn = doc.querySelector(".unlock-btn");
   btn.click();

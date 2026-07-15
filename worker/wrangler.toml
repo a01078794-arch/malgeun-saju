@@ -1,0 +1,10 @@
+name = "malgeun-saju-chat"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# 모델·허용 오리진은 여기서 바꿀 수 있음 (API 키는 여기 넣지 말 것 — wrangler secret 사용)
+[vars]
+MODEL = "claude-opus-4-8"          # 무료티어 비용 절감 시 "claude-haiku-4-5"로 교체
+ALLOW_ORIGIN = "https://a01078794-arch.github.io"
+
+# ANTHROPIC_API_KEY 는 시크릿으로:  wrangler secret put ANTHROPIC_API_KEY

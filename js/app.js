@@ -324,6 +324,8 @@ function render(r){
     const txt=`[맑은사주] 나는 "${label}"\n명식: ${P.hour?gzKo(P.hour)+"시 ":""}${gzKo(P.day)}일 ${gzKo(P.month)}월 ${gzKo(P.year)}년\n합이 드는 상대: ${hapTitle}(${hapStem}) · 나를 채우는 기운: ${ELEM_KO[motherElem]}\n${location.href}`;
     navigator.clipboard.writeText(txt).then(()=>toast("요약을 복사했어요"));
   });
+  // 대화(Claude 백엔드) 마운트 — chat.js 로드 시에만
+  if (window.mountSajuChat) try{ window.mountSajuChat(r); }catch(_e){}
   updateProgress();
 }
 
