@@ -164,7 +164,8 @@ function render(r){
   const st=strengthEstimate(P);
   const ess=composeEssence(r);
   const ch1=chapter("一",`본질 — ${ess.title}`,"해석",
-    ess.frags.map((f,i)=>`<p class="${i===0?"lede":i===1?"johu":""}">${T(f)}</p>`).join("")
+    `<p class="verdict">💡 <b>한마디로</b> — ${plainVerdict(P)}</p>`
+    + ess.frags.map((f,i)=>`<p class="${i===0?"lede":i===1?"johu":""}">${T(f)}</p>`).join("")
     + `<p><b>기운 세기</b> · ${st.label.replace("(참고)","")} <span class="tag">${st.detail.join("·")}</span> — ${T(STRENGTH_TEXT[st.label])}</p>`
     + `<p class="note">※ 신강약·용신의 정밀 판단은 격국 전체를 봐야 합니다 — 여기서는 참고치로만 드립니다. 이게 정직한 한계입니다.</p>`);
 
@@ -305,7 +306,14 @@ function render(r){
   calHtml+=`</div><p class="note">세운은 대운보다 신뢰도가 한 단계 낮은 것이 전통 통설입니다 — 큰 흐름은 대운으로, 해의 리듬은 세운으로 보세요.</p>`;
   const ch9=chapter("九","오년의 달력","해석", calHtml, {locked:true});
 
-  el.innerHTML=cardHtml+`<div class="book">`+ch0+ch1+ch2+ch3+ch4+ch5+ch6+ch7+ch8+ch9+`</div>
+  const tips=actionTips(P);
+  const tipsHtml=`<section class="chapter tips-block">
+    <div class="ch-head"><span class="ch-no">用</span><h2>이럴 땐 이렇게 — 실천 팁</h2><span class="badge badge-interp">조언</span></div>
+    <p class="chat-note">계산된 구조에서 뽑은, 오늘부터 써먹을 조언이에요.</p>
+    ${tips.map((t,i)=>`<p class="tip">✅ ${t}</p>`).join("")}
+    <p class="note">전통 통설 기반 참고예요 — 의료·법률·투자는 전문가 상담이 우선입니다.</p>
+  </section>`;
+  el.innerHTML=cardHtml+`<div class="book">`+ch0+ch1+ch2+ch3+ch4+ch5+ch6+ch7+ch8+ch9+`</div>`+tipsHtml+`
     <section class="chapter outro">
       <p class="outro-line">계산은 여기까지가 사실이고, 해석은 여기까지가 전통입니다.<br>나머지는 당신이 씁니다.</p>
       <button class="btn secondary" id="copy-text">텍스트 요약 복사</button>

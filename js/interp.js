@@ -281,6 +281,43 @@ function composeEssence(r){
   return {title:`${SEASON_NAMES[season]}의 ${dm.title}`, frags, structs, root, domGroup};
 }
 
+/* ---------- "그래서 뭐?" 한 줄 쉬운 결론 (챕터 맨 위용) ---------- */
+function plainVerdict(pillars){
+  const {grp} = godCounts(pillars);
+  const domGroup = Object.entries(grp).sort((a,b)=>b[1]-a[1])[0][0];
+  const cg = CAREER_GROUP_TEXT[domGroup];
+  const structs = godStructures(pillars);
+  if (structs.length){
+    let gist = structs[0].easy.replace(/^[^—]*—\s*/, "");      // 구조 설명의 쉬운 부분
+    gist = gist.replace(/^(.*?[요다])\..*$/, "$1.");           // 첫 문장까지만 (한마디로 = 짧게)
+    return `당신은 <b>"${cg.title}"</b> — ${gist}`;
+  }
+  return `당신은 <b>"${cg.title}"</b> — ${cg.easy}`;
+}
+
+/* ---------- "이럴 땐 이렇게" 실천 팁 (구조에서 도출) ---------- */
+function actionTips(pillars){
+  const {g, grp} = godCounts(pillars);
+  const keys = godStructures(pillars).map(s=>s.key);
+  const tips = [];
+  const add = t => { if (tips.length < 4 && !tips.includes(t)) tips.push(t); };
+  if (keys.includes("재다신약")) add("큰돈은 혼자 안고 가기보다 <b>조직 소속·전문 자격·남의 돈을 다루는 일</b>이 유리해요. 동업·보증·큰 대여는 피하고, 들어온 돈은 자동이체로 묶어두세요.");
+  if (keys.includes("식신생재")) add("<b>한 우물을 깊게 파는 전문성</b>이 그대로 돈이 되는 사주예요. 자격·기술을 꾸준히 쌓으면 안정적으로 벌립니다.");
+  if (keys.includes("상관생재")) add("순발력·기획·화제성이 돈이 되지만 <b>진폭이 큰</b> 편 — 잘 벌 때 미리 묶어두는(저축·고정자산) 습관이 관건이에요.");
+  if (keys.includes("상관견관")) add("실력은 인정받되, 상사·규칙과 부딪힐 것 같을 땐 <b>한 템포 쉬고</b> 말하세요. 그 한 박자가 이 사주의 평생 무기예요.");
+  if (keys.includes("군겁쟁재")) add("<b>돈과 사람은 섞지 마세요</b> — 동업·보증·지인 대여가 이 사주가 돈을 잃는 1순위 통로예요.");
+  if (keys.includes("무인성")) add("기댈 언덕보다 실전으로 크는 타입 — <b>자격증 하나</b>를 의식적으로 챙기면 약점이 메워져요.");
+  if (keys.includes("관인상생") || keys.includes("살인상생")) add("<b>자격·공부를 무기로 조직 안에서 올라가는 길</b>이 잘 맞아요. 시련이 실력으로 바뀌는 구조예요.");
+  if (keys.includes("도식")) add("배운 걸 머릿속에만 두지 말고 <b>반드시 밖으로 꺼내 결과물</b>로 만드세요 — 그게 이 사주의 보약이에요.");
+  if (grp["식상"] >= 3) add("표현·재능이 많은 만큼 방전도 빨라요 — <b>쉼·수면·물 챙기기</b>가 곧 실력 관리예요.");
+  if ((g["편재"]||0) >= 2) add("굴리는 돈이 도드라져 들어온 만큼 나가기 쉬워요 — <b>월급날 자동저축</b>을 걸어두세요.");
+  const cnt = elementCount(pillars);
+  const lackAdvice = {"목":"새 일은 계획을 세워 천천히 시작하기","화":"나를 알리고 드러내는 연습","토":"루틴·안정 장치 만들기","금":"거절과 마무리 연습","수":"휴식·수분·수면 챙기기"};
+  Object.entries(cnt).filter(([,v])=>v===0).forEach(([e])=>{ if(lackAdvice[e]) add(`${ELEM_KO[e]}(${e}) 기운이 없는 편 — <b>${lackAdvice[e]}</b>가 보약이에요.`); });
+  if (!tips.length) add("큰 결정은 서두르지 말고, <b>잘 맞는 사람·환경</b>을 곁에 두는 게 이 사주의 개운법이에요.");
+  return tips.slice(0, 3);
+}
+
 /* ---------- 조건부 공통 처방 (전원 동일 잔소리 제거) ---------- */
 function conditionalNotes(pillars){
   const {g,grp} = godCounts(pillars);

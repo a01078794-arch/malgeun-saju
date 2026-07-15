@@ -211,3 +211,8 @@ footer{text-align:center; color:var(--ink-dim); font-size:.74rem; margin-top:36p
 .compat-fields select{flex:1 1 110px; min-width:0;}
 .compat-fields input:focus, .compat-fields select:focus{outline:none; border-color:var(--ok);}
 #compat-go{width:100%; padding:13px; font-size:15px;}
+
+/* 쉬운 결론 + 실천 팁 */
+.verdict{background:var(--paper2); border-left:4px solid var(--dansa); padding:14px 16px; margin-bottom:16px; font-size:1.06rem; line-height:1.7; border-radius:0 4px 4px 0;}
+.tip{background:#fffdf7; border:1px solid var(--line); border-left:3px solid var(--ok); padding:12px 15px; margin:9px 0; font-size:.95rem; line-height:1.75;}
+.tips-block .ch-no{color:var(--ok);}
