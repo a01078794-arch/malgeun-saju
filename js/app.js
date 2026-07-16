@@ -196,7 +196,7 @@ function render(r){
   const relAll=[...stemRelations(P), ...branchRelations(P)];
   let structHtml="";
   if(structs.length) structHtml+=`<div class="struct-block"><h4>내 사주의 구조</h4>`+structs.slice(0,3).map(s=>`<p class="struct">🔑 ${T(s)}</p>`).join("")+`</div>`;
-  if(relAll.length) structHtml+=`<div class="rel-block"><h4>글자끼리의 관계 (합·충·형)</h4>`+relAll.slice(0,5).map(x=>`<p class="rel">${T(x)}</p>`).join("")+`</div>`;
+  if(relAll.length && MODE==="expert") structHtml+=`<div class="rel-block"><h4>글자끼리의 관계 (합·충·형)</h4>`+relAll.slice(0,5).map(x=>`<p class="rel">${T(x)}</p>`).join("")+`</div>`;
   const ch2=chapter("二","오행·기질·구조","해석", elemHtml+`<div class="interp-block">${elemComment}</div>`+godHtml+structHtml);
 
   /* ── 三: 별자리 (신살) ── */
