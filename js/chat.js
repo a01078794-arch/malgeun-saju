@@ -324,9 +324,29 @@ function addMsg(role, html) {
   return m;
 }
 
+/* 하루 질문 한도 — 무료 10회 (질문팩 결제 도입 전까지의 보호선) */
+const CHAT_DAILY_LIMIT = 10;
+function chatQuota() {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem("chatDate") !== today) {
+      localStorage.setItem("chatDate", today); localStorage.setItem("chatCnt", "0");
+    }
+    return CHAT_DAILY_LIMIT - (+localStorage.getItem("chatCnt") || 0);
+  } catch (_e) { return 1; }
+}
+function chatSpend() {
+  try { localStorage.setItem("chatCnt", String((+localStorage.getItem("chatCnt") || 0) + 1)); } catch (_e) {}
+}
+
 function submitChat(text) {
   text = (text || "").trim();
   if (!text) return;
+  if (chatQuota() <= 0) {
+    addMsg("assistant", "오늘 준비된 질문 10개를 다 썼어요 🙏 내일 다시 열려요. 더 깊은 이야기가 필요하면 위의 심층 리포트를 받아보세요 — 지금은 무료예요.");
+    return;
+  }
+  chatSpend();
   const input = document.getElementById("chat-input");
   if (input) input.value = "";
   if (!WORKER_URL) {

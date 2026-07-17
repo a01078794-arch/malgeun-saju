@@ -264,9 +264,9 @@ function composeEssence(r){
     easy:`${SEASON_NAMES[season]}에 태어난 ${dm.title} — ${dm.easy}`,
     expert:`${SEASON_NAMES[season]}생 ${STEMS_KO[ds]}(${STEMS[ds]}). ${dm.expert}`
   });
-  // 2) 계절 조후 (축2)
+  // 2) 계절 조후 (축2) — 쉬운말은 "뜻+행동"(JOHU_EASY), 전문가는 궁통보감 요약
   frags.push({
-    easy:`🌡 계절 처방 — ${JOHU_HINT[STEM_ELEM[ds]][season]}.`,
+    easy:`🌿 나의 보약 — ${JOHU_EASY[STEM_ELEM[ds]][season]}`,
     expert:`조후(궁통보감 요약) — ${JOHU_HINT[STEM_ELEM[ds]][season]}.`
   });
   // 3) 강약 + 통근 (축3) — 두 사람이 같은 일간이어도 여기서 갈림

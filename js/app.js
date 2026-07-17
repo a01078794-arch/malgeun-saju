@@ -241,20 +241,26 @@ function render(r){
   pillarHtml+=`</div>`;
   let calcHtml=`<ul class="calc-log">${r.calcLog.map(l=>`<li>${l}</li>`).join("")}</ul>`;
   if(r.warnings.length) calcHtml+=r.warnings.map(w=>`<div class="warning">⚠️ ${w}</div>`).join("");
+  // 여덟 글자 상세는 궁금한 사람만 — 기본 접힘 (카드에 이미 4주가 보임)
   const sect3=sect("나의 여덟 글자","계산",
-    pillarHtml+`<details class="fold"><summary>이 명식이 나온 계산 과정 보기</summary>${calcHtml}</details>`);
+    `<details class="fold"><summary>여덟 글자와 계산 근거 자세히 보기</summary>${pillarHtml}${calcHtml}</details>`);
 
   /* ── 5. 대운 타임라인 ── */
   let luckHtml=`<div class="luck-strip">`;
   r.luckPillars.forEach(lp=>{
     const active=nowYear>=lp.startYear&&nowYear<lp.startYear+10;
-    luckHtml+=`<div class="luck ${active?'active':''}"><div class="l-age">${lp.startAge}세<br><span>${lp.startYear}~</span></div><div class="l-gz">${gzDisp(lp.stem,lp.branch)}</div><div class="l-god">${tenGod(ds,lp.stem)}·${tenGodBranch(ds,lp.branch)}</div></div>`;
+    const g1=tenGod(ds,lp.stem), g2=tenGodBranch(ds,lp.branch);
+    // 쉬운말: 십성 대신 한 단어 키워드 ("겁재·정관"이 아니라 "승부·안정")
+    const tagTxt = MODE==="easy" ? `${GOD_WORD[g1]}·${GOD_WORD[g2]}` : `${g1}·${g2}`;
+    luckHtml+=`<div class="luck ${active?'active':''}"><div class="l-age">${lp.startAge}세<br><span>${lp.startYear}~</span></div><div class="l-gz">${gzDisp(lp.stem,lp.branch)}</div><div class="l-god">${tagTxt}</div></div>`;
   });
   luckHtml+=`</div>`;
   const cur=r.luckPillars.find(lp=>nowYear>=lp.startYear&&nowYear<lp.startYear+10);
   let curTxt="";
   if(cur){ const g1=tenGod(ds,cur.stem);
-    curTxt=`<p><b>지금 대운(${gzDisp(cur.stem,cur.branch)}, ${cur.startAge}~${cur.startAge+9}세)</b>의 키워드는 <b>${g1}</b> — ${T(TEN_GOD_TEXT[g1])}. 10년 단위로 삶의 배경 계절이 바뀌어요.</p>`; }
+    curTxt=`<p><b>지금 나의 10년(${cur.startAge}~${cur.startAge+9}세)</b>은 '${GOD_WORD[g1]}'의 계절이에요. ${TEN_GOD_ACTION[g1]}</p>`;
+    if(MODE==="expert") curTxt+=`<p class="note">현재 대운 ${gz(cur)} — 십성 ${g1}·${tenGodBranch(ds,cur.branch)}. ${TEN_GOD_TEXT[g1].expert}</p>`;
+  }
   const luckNote = MODE==="expert"
     ? `대운수 ${r.luckStart} · ${r.forward?"순행":"역행"} · 절기 정밀 계산`
     : `10년 주기가 ${r.luckStart}세부터 시작돼요 (절기 시각까지 계산해 정했어요)`;
@@ -299,15 +305,26 @@ function render(r){
     const g2=tenGodBranch(ds,p.branch); if(ssi.stars.includes(g2)) spCount++; }
   let loveHtml=`<p>${T(SPOUSE_COUNT_TEXT[Math.min(spCount,3)])}</p>`;
   loveHtml+=`<p><b>배우자 자리(일지)</b> — ${T(SPOUSE_PALACE_TEXT[iljiGod])}</p>`;
+  // 메인 지표: 배우자 기운(십성)·배우자궁 합이 드는 해 — 보통 1~3년 안에 잡힌다
+  const bondYears=years5.filter(y=>
+    ssi.stars.includes(y.stemGod)||ssi.stars.includes(y.branchGod)||y.events.some(e=>e.includes("합")));
+  if(bondYears.length){
+    loveHtml+=`<p>💞 <b>앞으로 5년 중 인연이 움직이는 해: ${bondYears.map(y=>`<b>${y.year}</b>`).join(" · ")}</b> — 배우자 기운이 들어오거나 배우자 자리와 합이 드는 해예요. 새 만남도, 있는 관계의 진전도 이런 해에 잘 움직여요.</p>`;
+  } else {
+    loveHtml+=`<p>💞 앞으로 5년은 인연 자리가 조용한 편이에요 — 억지 타이밍보다 나를 채우는 시간으로 쓰기 좋아요.</p>`;
+  }
+  // 보조 지표(홍란): 6년 안에 올 때만 표시 — 멀면 오해만 낳는다
   if(hongranSal){
-    const yrsFor=br=>{const out=[];for(let yy=nowYear;yy<nowYear+30&&out.length<3;yy++){if(((yy-4)%12+12)%12===br)out.push(yy);}return out;};
-    loveHtml+=`<p>💮 인연 기운이 켜지는 해: <b>${yrsFor(hongranSal.hongran).join(" · ")}</b> / 경사 기운: <b>${yrsFor(hongranSal.cheonhui).join(" · ")}</b> — 확정이 아니라 "기운이 들어오는 해"로 봐 주세요.</p>`;
+    const nextOf=br=>{for(let yy=nowYear;yy<nowYear+12;yy++){if(((yy-4)%12+12)%12===br)return yy;}return null;};
+    const hy=nextOf(hongranSal.hongran);
+    if(hy!==null && hy<=nowYear+6) loveHtml+=`<p class="note">보조 지표로는 ${hy}년에도 만남의 별(홍란)이 켜져요.</p>`;
   }
   loveHtml+=`<p>🤝 처음 만나도 오래 알던 사이처럼 편한 상대: <b>${hapTitle}(${hapStem}) 일간</b> — 고전의 천간합 공식이에요.</p>`;
 
-  // 올해
+  // 올해 — "무슨 기운인지 + 그래서 뭘 하면 되는지"
   const thisYF=years5[0];
-  let nyHtml=`<p>${nowYear}년(${gzDisp(thisYF.stem,thisYF.branch)}년)은 나에게 <b>${thisYF.stemGod}·${thisYF.branchGod}</b>의 해 — ${T(TEN_GOD_TEXT[thisYF.stemGod])}.</p>`;
+  let nyHtml=`<p>올해 ${nowYear}년은 나에게 <b>'${GOD_WORD[thisYF.stemGod]}'의 해</b>예요. ${TEN_GOD_ACTION[thisYF.stemGod]}</p>`;
+  if(MODE==="expert") nyHtml+=`<p class="note">${gzDisp(thisYF.stem,thisYF.branch)}년 — 십성 ${thisYF.stemGod}·${thisYF.branchGod}.</p>`;
   thisYF.events.forEach(e2=>{ nyHtml+=`<p class="yevent">✨ ${e2}</p>`; });
   const yStemIdx=((nowYear-4)%10+10)%10;
   const inStemTbl=[2,4,6,8,0];

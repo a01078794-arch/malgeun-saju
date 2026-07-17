@@ -53,8 +53,10 @@ setTimeout(()=>{
   check("리포트 목차 칩", doc.querySelectorAll(".report-toc span").length>=5);
   // '더 깊게' 훅 (summary-then-paywall 동선)
   check("도메인 → 리포트 훅", doc.querySelectorAll(".go-deep").length>=3, String(doc.querySelectorAll(".go-deep").length));
-  // 인연 연도 표기
-  check("인연운 연도 표기", /인연 기운이 켜지는 해/.test(result.innerHTML));
+  // 인연 연도 표기 (메인 = 배우자 기운·일지합 해, 5년 내)
+  check("인연운 연도 표기", /인연이 움직이는 해|인연 자리가 조용한 편/.test(result.innerHTML));
+  // 12년 주기 홍란이 메인 문장으로 승격되는 회귀 방지
+  check("홍란 원거리 연도 노출 없음", !/인연 기운이 켜지는 해/.test(result.innerHTML));
   // 공유 버튼
   check("공유 버튼 2종", !!doc.getElementById("copy-link") && !!doc.getElementById("save-card"));
   // 자기방어 카피 제거 확인
