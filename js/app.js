@@ -1,4 +1,7 @@
-/* 맑은사주 v2 — 문집 × 부적 UI */
+/* 맑은사주 v4 — TDS 뼈대 × 오행 5색 × 공유 카드
+ * 화면 순서(심리 동선): 공유 카드(정체성) → 한 줄 총평 + Do/Don't → 오행 지도
+ * → 명식(계산 공개) → 대운 → 다섯 가지 질문(무료 요약) → 심층 리포트 → 대화·궁합
+ */
 "use strict";
 
 const CITIES = [
@@ -10,9 +13,11 @@ const CITIES = [
   {name:"제주", lon:126.53},{name:"창원", lon:128.68},{name:"천안", lon:127.15},
   {name:"포항", lon:129.36},{name:"목포", lon:126.39},{name:"여수", lon:127.66},{name:"원주", lon:127.95}
 ];
-const ELEM_COLOR = {"목":"#5a7d5a","화":"#b5493a","토":"#c29a4b","금":"#8a8f98","수":"#4a6b8a"};
+const ELEM_COLOR = {"목":"#4E8A66","화":"#C25450","토":"#C29A4B","금":"#8A8F98","수":"#4A6B8A"};
+// 다크 표면(#191F28)용 밝은 변형 — 공유 카드·캔버스에서 오행색이 살아나도록
+const ELEM_COLOR_DARK = {"목":"#6FBF8F","화":"#E8837E","토":"#E0B968","금":"#AEB4BE","수":"#7DA3C8"};
+const ELEM_HAN = {"목":"木","화":"火","토":"土","금":"金","수":"水"};
 
-// localStorage는 file://·인앱브라우저·시크릿모드에서 예외를 던질 수 있음 — 안전 래퍼
 const store = {
   get(k){ try{ return localStorage.getItem(k); }catch(_e){ return null; } },
   set(k,v){ try{ localStorage.setItem(k,v); }catch(_e){} }
@@ -20,11 +25,10 @@ const store = {
 let MODE = store.get("sajuMode") || "easy";
 let LAST = null;
 
-// 어떤 에러든 화면에 보이게 (원격 진단용)
 window.addEventListener("error", ev=>{
   try{
     const b=document.createElement("div");
-    b.style.cssText="position:fixed;top:0;left:0;right:0;background:#b5493a;color:#fff;padding:8px 12px;font-size:12px;z-index:999;word-break:break-all";
+    b.style.cssText="position:fixed;top:0;left:0;right:0;background:#F04452;color:#fff;padding:8px 12px;font-size:12px;z-index:999;word-break:break-all";
     b.textContent="오류: "+(ev.message||ev.error)+" @"+(ev.lineno||"?");
     document.body.appendChild(b);
   }catch(_e){}
@@ -32,7 +36,7 @@ window.addEventListener("error", ev=>{
 
 function initApp(){
   const citySel = document.getElementById("city");
-  if (!citySel || citySel.options.length>0) return; // 중복 초기화 방지
+  if (!citySel || citySel.options.length>0) return;
   CITIES.forEach((c,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=c.name; citySel.appendChild(o); });
   document.getElementById("saju-form").addEventListener("submit", onSubmit);
   document.getElementById("hour-unknown").addEventListener("change", e=>{
@@ -56,7 +60,6 @@ function initApp(){
     document.getElementById("saju-form").requestSubmit();
   }
 }
-// 문서가 이미 로드된 상태여도, 아직 로딩 중이어도 반드시 1회 초기화
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initApp);
 else initApp();
 
@@ -73,6 +76,13 @@ function updateProgress(){
   bar.style.width = (total>0 ? (done/total*100) : 0) + "%";
 }
 
+function formError(msg){
+  const form=document.getElementById("saju-form");
+  let el=form.querySelector(".field-msg");
+  if(!msg){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement("p"); el.className="field-msg"; form.insertBefore(el, form.querySelector("button[type=submit]")); }
+  el.textContent=msg;
+}
 function onSubmit(e){
   e.preventDefault();
   const y=+document.getElementById("year").value, m=+document.getElementById("month").value, d=+document.getElementById("day").value;
@@ -80,37 +90,62 @@ function onSubmit(e){
   const h=hourUnknown?null:+document.getElementById("hour").value;
   const mi=hourUnknown?null:+document.getElementById("minute").value;
   const g=document.getElementById("gender").value, ci=+document.getElementById("city").value;
-  if (!y||!m||!d||y<1900||y>2050){ alert("생년월일을 확인해주세요 (1900~2050)"); return; }
+  if (!y||!m||!d||y<1900||y>2050){ formError("생년월일을 확인해 주세요 (1900~2050년)"); return; }
   const dt=new Date(y,m-1,d);
-  if (dt.getMonth()!==m-1||dt.getDate()!==d){ alert("존재하지 않는 날짜입니다"); return; }
-  if (!hourUnknown && (isNaN(h)||h<0||h>23)){ alert("태어난 시를 입력하거나 '시간 모름'을 선택해주세요"); return; }
+  if (dt.getMonth()!==m-1||dt.getDate()!==d){ formError("존재하지 않는 날짜예요"); return; }
+  if (!hourUnknown && (isNaN(h)||h<0||h>23)){ formError("태어난 시를 입력하거나 '시간 모름'을 선택해 주세요"); return; }
+  formError(null);
   const input={year:y,month:m,day:d,hour:h??12,minute:mi??0,hourUnknown,gender:g,longitude:CITIES[ci].lon,placeName:CITIES[ci].name};
   LAST=computeSaju(input);
   render(LAST);
   const params=new URLSearchParams({y,mo:m,d,g,c:ci});
   if(!hourUnknown){ params.set("h",h); params.set("mi",mi); }
-  try{ history.replaceState(null,"","?"+params.toString()); }catch(_e){ /* file:// 등 로컬 실행 환경 */ }
+  try{ history.replaceState(null,"","?"+params.toString()); }catch(_e){}
   document.getElementById("result").scrollIntoView({behavior:"smooth"});
 }
 
 function T(o){ return o[MODE]||o.easy; }
 function gz(p){ return STEMS[p.stem]+BRANCHES[p.branch]; }
 function gzKo(p){ return STEMS_KO[p.stem]+BRANCHES_KO[p.branch]; }
-// 간지 표시: 쉬운말 모드는 한글 먼저, 전문가 모드는 한자
 function gzDisp(stem,branch){
   return MODE==="easy" ? STEMS_KO[stem]+BRANCHES_KO[branch] : STEMS[stem]+BRANCHES[branch];
 }
-function chapter(no, title, badge, inner, opts={}){
-  const lock = opts.locked? ` data-locked="true"` : "";
-  return `<section class="chapter${opts.locked?" locked":""}" id="ch-${no}"${lock}>
-    <div class="ch-head"><span class="ch-no">${no}</span><h2>${title}</h2>${badge?`<span class="badge ${badge==="계산"?"badge-calc":"badge-interp"}">${badge}</span>`:""}</div>
-    <div class="ch-body">${inner}</div>
-    ${opts.locked?`<div class="paywall"><div class="pw-inner">
-      <p class="pw-price"><del>990원</del> <b>오픈 기념 무료</b></p>
-      <button class="btn unlock-btn" data-target="ch-${no}">열어보기</button>
-      <p class="pw-note">정식 오픈 후 990원 — 지금은 전부 무료로 풀어드려요</p>
-    </div></div>`:""}
+function sect(title, badge, inner, id){
+  return `<section class="sect"${id?` id="${id}"`:""}>
+    <div class="sect-head"><h2>${title}</h2>${badge?`<span class="badge ${badge==="계산"?"badge-calc":"badge-interp"}">${badge}</span>`:""}</div>
+    ${inner}
   </section>`;
+}
+
+/* 구조에서 Do/Don't 도출 — 짧고 이 사주 전용 */
+function doDontLists(P){
+  const keys = godStructures(P).map(s=>s.key);
+  const {g, grp} = godCounts(P);
+  const cnt = elementCount(P);
+  const dos=[], donts=[];
+  const addDo=t=>{ if(dos.length<4 && !dos.includes(t)) dos.push(t); };
+  const addDont=t=>{ if(donts.length<4 && !donts.includes(t)) donts.push(t); };
+  if(keys.includes("식신생재")) addDo("한 우물 전문성 — 그대로 수입이 돼요");
+  if(keys.includes("상관생재")){ addDo("아이디어·기획으로 승부하기"); addDont("잘 벌 때 번 만큼 바로 쓰기 — 수입 오르내림이 커요"); }
+  if(keys.includes("상관견관")) addDont("윗사람 앞에서 바로 받아치기");
+  if(keys.includes("재다신약")){ addDo("조직·자격에 기대 큰돈 다루기"); addDont("혼자 큰돈 떠안기"); }
+  if(keys.includes("군겁쟁재")) addDont("동업·보증·지인 돈거래");
+  if(keys.includes("관살태과")) addDo("압박은 자격·공부로 소화하기");
+  if(keys.includes("관인상생")||keys.includes("살인상생")) addDo("자격을 무기로 조직에서 올라가기");
+  if(keys.includes("무인성")) addDo("자격증 하나 의식적으로 챙기기");
+  if(keys.includes("도식")) addDo("배운 건 꺼내서 결과물로 만들기");
+  if(keys.includes("식상제살")) addDo("시련은 실력으로 되받아치기");
+  if(grp["식상"]>=3) addDont("쉼 없이 달리기 — 방전이 빨라요");
+  if((g["편재"]||0)>=2) addDo("월급날 자동저축 걸어두기");
+  const lackDo={"목":"계획 세우고 천천히 시작하기","화":"나를 드러내는 연습","토":"루틴·안정 장치 만들기","금":"거절과 마무리 연습","수":"휴식·수분·수면 챙기기"};
+  Object.entries(cnt).filter(([,v])=>v===0).forEach(([e])=>{ if(lackDo[e]) addDo(lackDo[e]); });
+  // 폴백도 이 사주의 우세 기운 기반 (바넘 금지)
+  const domG=Object.entries(grp).sort((a,b)=>b[1]-a[1])[0][0];
+  const domDo={"비겁":"내 이름 걸고 하는 일 늘리기","식상":"결과물을 만들어 내보이기","재성":"숫자로 성과가 보이는 일 맡기","관성":"체계 있는 조직에서 승부하기","인성":"자격·공부에 먼저 투자하기"};
+  const domDont={"비겁":"동업으로 돈 섞기","식상":"말이 앞서는 약속","재성":"들어온 만큼 쓰는 소비","관성":"모든 책임 혼자 떠안기","인성":"생각만 하고 실행 미루기"};
+  if(!dos.length) addDo(domDo[domG]);
+  if(!donts.length) addDont(domDont[domG]);
+  return {dos, donts};
 }
 
 function render(r){
@@ -124,28 +159,73 @@ function render(r){
   const hapStem=STEM_HAP[STEMS[ds]];
   const hapTitle=DAY_MASTER_TEXT[hapStem].title;
   const motherElem=ELEM_MOTHER[STEM_ELEM[ds]];
+  const nowYear=new Date().getFullYear();
+  const posOrder=[["year","연주"],["month","월주"],["day","일주"],["hour","시주"]];
 
-  /* ── 부적 카드 (공유의 핵심) ── */
-  const cardHtml=`
-  <section class="talisman-wrap">
-    <div class="talisman" id="talisman">
-      <div class="tal-top">四柱 · ${SEASON_NAMES[season]}</div>
-      <div class="tal-label">${label}</div>
-      <div class="tal-gz">${["hour","day","month","year"].map(k=>P[k]?`<span style="color:${ELEM_COLOR[STEM_ELEM[P[k].stem]]}">${STEMS[P[k].stem]}</span><span style="color:${ELEM_COLOR[BRANCH_ELEM[P[k].branch]]}">${BRANCHES[P[k].branch]}</span>`:"").join(" ")}</div>
-      <div class="tal-tags">
-        <span>합이 드는 상대 · ${hapTitle}(${hapStem})</span>
-        <span>나를 채우는 기운 · ${ELEM_KO[motherElem]}(${motherElem})</span>
+  /* ── 1. 공유 카드 (스크린샷 = 완성된 공유물) ── */
+  const idCard=`
+  <section class="id-card" id="talisman">
+    <div class="id-season">${SEASON_NAMES[season]} · ${r.sajuYear}년생</div>
+    <div class="id-label">${label}</div>
+    <div class="id-pillars">
+      ${posOrder.map(([k,lab])=>{
+        const p=P[k];
+        if(!p) return `<div class="id-pillar"><div class="ip-pos">${lab}</div><div class="ip-gz" style="color:#6B7684">—</div><div class="ip-ko">모름</div></div>`;
+        return `<div class="id-pillar"><div class="ip-pos">${lab}</div>
+          <div class="ip-gz"><span style="color:${ELEM_COLOR_DARK[STEM_ELEM[p.stem]]}">${STEMS[p.stem]}</span><span style="color:${ELEM_COLOR_DARK[BRANCH_ELEM[p.branch]]}">${BRANCHES[p.branch]}</span></div>
+          <div class="ip-ko">${gzKo(p)}</div></div>`;
+      }).join("")}
+    </div>
+    <p class="id-verdict">${plainVerdict(P)}</p>
+    <div class="id-brand">맑은사주</div>
+  </section>
+  <div class="id-actions">
+    <button class="btn" id="save-card">카드 저장</button>
+    <button class="btn ghost" id="copy-link">링크 복사</button>
+  </div>`;
+
+  /* ── 2. 본질 + Do/Don't ── */
+  const ess=composeEssence(r);
+  const st=strengthEstimate(P);
+  const dd=doDontLists(P);
+  const essHtml=
+    ess.frags.map((f,i)=>`<p class="${i===0?"lede":""}">${T(f)}</p>`).join("")
+    + `<p><b>기운 세기</b> · ${st.label.replace("(참고)","")} — ${T(STRENGTH_TEXT[st.label])}</p>`
+    + `<div class="dodont">
+        <div class="col do"><h4>이 사주에 잘 맞는 것</h4>${dd.dos.map(t=>`<li>✓ ${t}</li>`).join("")}</div>
+        <div class="col dont"><h4>이 사주가 조심할 것</h4>${dd.donts.map(t=>`<li>✕ ${t}</li>`).join("")}</div>
       </div>
-      <div class="tal-seal">맑은<br>사주</div>
-    </div>
-    <div class="tal-actions">
-      <button class="btn" id="save-card">부적 카드 저장</button>
-      <button class="btn secondary" id="copy-link">내 사주 링크 복사</button>
-    </div>
-  </section>`;
+    <p class="note">기운 세기·용신의 정밀 판단은 격국 전체를 봐야 해서, 여기서는 참고치로 드려요.</p>`;
+  const sect1=sect("나는 어떤 사람인가","해석",essHtml);
 
-  /* ── 序: 명식 + 계산 공개 ── */
-  const posOrder=[["hour","시주"],["day","일주"],["month","월주"],["year","연주"]];
+  /* ── 3. 오행 5색 지도 ── */
+  const cnt=elementCount(P);
+  let elemHtml=`<div class="elem-grid">`;
+  for(const e2 of ["목","화","토","금","수"]){
+    elemHtml+=`<div class="elem-cell ${cnt[e2]===0?"zero":""}" style="background:${ELEM_COLOR[e2]}">
+      <div class="e-han">${ELEM_HAN[e2]}</div><div class="e-name">${ELEM_KO[e2]}</div><div class="e-cnt">${cnt[e2]}</div></div>`;
+  }
+  elemHtml+=`</div>`;
+  const maxE=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+  const zeros=Object.entries(cnt).filter(([,v])=>v===0).map(([k])=>k);
+  let elemComment="";
+  if(maxE[1]>=3) elemComment+=`<p><b>${maxE[0]}(${ELEM_KO[maxE[0]]})이 많아요</b> — ${T(ELEM_TEXT_EXCESS[maxE[0]])}</p>`;
+  zeros.forEach(z=>{ elemComment+=`<p><b>${z}(${ELEM_KO[z]})이 비어 있어요</b> — ${T(ELEM_TEXT_LACK[z])}</p>`; });
+  const gods={};
+  for(const [key] of posOrder){ const p=P[key]; if(!p) continue;
+    if(key!=="day"){ const g1=tenGod(ds,p.stem); gods[g1]=(gods[g1]||0)+1; }
+    const g2=tenGodBranch(ds,p.branch); gods[g2]=(gods[g2]||0)+1; }
+  let godHtml=`<div class="god-chips">`;
+  Object.entries(gods).sort((a,b)=>b[1]-a[1]).forEach(([g,n])=>{ godHtml+=`<div class="chip"><b>${g}${n>1?" ×"+n:""}</b><span>${T(TEN_GOD_TEXT[g])}</span></div>`; });
+  godHtml+=`</div>`;
+  const structs=godStructures(P);
+  const relAll=[...stemRelations(P), ...branchRelations(P)];
+  let structHtml="";
+  if(structs.length) structHtml+=`<div class="struct-block">`+structs.slice(0,3).map(s=>`<p class="struct">🔑 ${T(s)}</p>`).join("")+`</div>`;
+  if(relAll.length && MODE==="expert") structHtml+=relAll.slice(0,5).map(x=>`<p class="rel">${T(x)}</p>`).join("");
+  const sect2=sect("나의 오행 지도","해석", elemHtml+elemComment+godHtml+structHtml);
+
+  /* ── 4. 명식 + 계산 공개 ── */
   let pillarHtml=`<div class="pillar-grid">`;
   for (const [key,lab] of posOrder){
     const p=P[key];
@@ -161,59 +241,10 @@ function render(r){
   pillarHtml+=`</div>`;
   let calcHtml=`<ul class="calc-log">${r.calcLog.map(l=>`<li>${l}</li>`).join("")}</ul>`;
   if(r.warnings.length) calcHtml+=r.warnings.map(w=>`<div class="warning">⚠️ ${w}</div>`).join("");
-  const ch0=chapter("序","나의 명식","계산",
-    pillarHtml+`<details class="calc-details"><summary>이 명식이 나온 계산 과정 — 전부 공개합니다</summary>${calcHtml}</details>`);
+  const sect3=sect("나의 여덟 글자","계산",
+    pillarHtml+`<details class="fold"><summary>이 명식이 나온 계산 과정 보기</summary>${calcHtml}</details>`);
 
-  /* ── 一: 본질 (일간×계절×강약·통근×대표구조 조합) ── */
-  const st=strengthEstimate(P);
-  const ess=composeEssence(r);
-  const ch1=chapter("一",`본질 — ${ess.title}`,"해석",
-    `<p class="verdict">💡 <b>한마디로</b> — ${plainVerdict(P)}</p>`
-    + ess.frags.map((f,i)=>`<p class="${i===0?"lede":i===1?"johu":""}">${T(f)}</p>`).join("")
-    + `<p><b>기운 세기</b> · ${st.label.replace("(참고)","")} <span class="tag">${st.detail.join("·")}</span> — ${T(STRENGTH_TEXT[st.label])}</p>`
-    + `<p class="note">※ 신강약·용신의 정밀 판단은 격국 전체를 봐야 합니다 — 여기서는 참고치로만 드립니다. 이게 정직한 한계입니다.</p>`);
-
-  /* ── 二: 오행과 기질 ── */
-  const cnt=elementCount(P);
-  const total=Object.values(cnt).reduce((a,b)=>a+b,0);
-  let elemHtml=`<div class="elem-bars">`;
-  for(const e2 of ["목","화","토","금","수"]){
-    const pct=Math.round(cnt[e2]/total*100);
-    elemHtml+=`<div class="elem-row"><span class="elem-name" style="color:${ELEM_COLOR[e2]}">${e2} ${ELEM_KO[e2]}</span>
-      <div class="bar-track"><div class="bar" style="width:${Math.max(pct,3)}%;background:${ELEM_COLOR[e2]}"></div></div><span class="elem-cnt">${cnt[e2]}</span></div>`;
-  }
-  elemHtml+=`</div>`;
-  const maxE=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
-  const zeros=Object.entries(cnt).filter(([,v])=>v===0).map(([k])=>k);
-  let elemComment="";
-  if(maxE[1]>=3) elemComment+=`<p><b>${maxE[0]}(${ELEM_KO[maxE[0]]})이 많은 사주</b> — ${T(ELEM_TEXT_EXCESS[maxE[0]])}</p>`;
-  zeros.forEach(z=>{ elemComment+=`<p><b>${z}(${ELEM_KO[z]}) 없음</b> — ${T(ELEM_TEXT_LACK[z])}</p>`; });
-  const gods={};
-  for(const [key] of posOrder){ const p=P[key]; if(!p) continue;
-    if(key!=="day"){ const g1=tenGod(ds,p.stem); gods[g1]=(gods[g1]||0)+1; }
-    const g2=tenGodBranch(ds,p.branch); gods[g2]=(gods[g2]||0)+1; }
-  let godHtml=`<div class="god-chips">`;
-  Object.entries(gods).sort((a,b)=>b[1]-a[1]).forEach(([g,n])=>{ godHtml+=`<div class="chip"><b>${g}${n>1?" ×"+n:""}</b><span>${T(TEN_GOD_TEXT[g])}</span></div>`; });
-  godHtml+=`</div>`;
-  // 십성 조합 구조 + 글자끼리의 관계 (개인차의 핵심 — 실제 글자·자리 기준)
-  const structs=godStructures(P);
-  const relAll=[...stemRelations(P), ...branchRelations(P)];
-  let structHtml="";
-  if(structs.length) structHtml+=`<div class="struct-block"><h4>내 사주의 구조</h4>`+structs.slice(0,3).map(s=>`<p class="struct">🔑 ${T(s)}</p>`).join("")+`</div>`;
-  if(relAll.length && MODE==="expert") structHtml+=`<div class="rel-block"><h4>글자끼리의 관계 (합·충·형)</h4>`+relAll.slice(0,5).map(x=>`<p class="rel">${T(x)}</p>`).join("")+`</div>`;
-  const ch2=chapter("二","오행·기질·구조","해석", elemHtml+`<div class="interp-block">${elemComment}</div>`+godHtml+structHtml);
-
-  /* ── 三: 별자리 (신살) ── */
-  const sals=shinsal(P,r.sajuYear);
-  let salHtml="";
-  sals.forEach(s=>{
-    const key=Object.keys(SHINSAL_TEXT).find(k=>s.name.startsWith(k.replace(/\(.*\)/,"")))||Object.keys(SHINSAL_TEXT).find(k=>s.name.startsWith(k));
-    salHtml+=`<div class="sal ${s.absent?'absent':''} ${s.good===false?'care':''}"><b>${s.name}</b> <span class="where">${s.where}</span><p>${key?T(SHINSAL_TEXT[key]):""}${s.absent?" — 지금은 없지만 '언제 들어오는지'가 포인트예요.":""}</p></div>`;
-  });
-  const ch3=chapter("三","타고난 별들 (신살)","해석", salHtml+`<p class="note">※ 신살은 보조 지표입니다. 겁주는 도구가 아니라 관리 포인트로만 읽으세요.</p>`);
-
-  /* ── 四: 대운 ── */
-  const nowYear=new Date().getFullYear();
+  /* ── 5. 대운 타임라인 ── */
   let luckHtml=`<div class="luck-strip">`;
   r.luckPillars.forEach(lp=>{
     const active=nowYear>=lp.startYear&&nowYear<lp.startYear+10;
@@ -223,61 +254,67 @@ function render(r){
   const cur=r.luckPillars.find(lp=>nowYear>=lp.startYear&&nowYear<lp.startYear+10);
   let curTxt="";
   if(cur){ const g1=tenGod(ds,cur.stem);
-    curTxt=`<p><b>지금 대운(${gzDisp(cur.stem,cur.branch)}, ${cur.startAge}~${cur.startAge+9}세)</b>의 키워드는 <b>${g1}</b> — ${T(TEN_GOD_TEXT[g1])}. 10년 단위로 삶의 배경 계절이 바뀝니다.</p>`; }
-  const ch4=chapter("四","대운 — 십 년의 계절","계산", luckHtml+curTxt+`<p class="note">대운수 ${r.luckStart} · ${r.forward?"순행":"역행"} (절기 정밀 계산)</p>`);
+    curTxt=`<p><b>지금 대운(${gzDisp(cur.stem,cur.branch)}, ${cur.startAge}~${cur.startAge+9}세)</b>의 키워드는 <b>${g1}</b> — ${T(TEN_GOD_TEXT[g1])}. 10년 단위로 삶의 배경 계절이 바뀌어요.</p>`; }
+  const luckNote = MODE==="expert"
+    ? `대운수 ${r.luckStart} · ${r.forward?"순행":"역행"} · 절기 정밀 계산`
+    : `10년 주기가 ${r.luckStart}세부터 시작돼요 (절기 시각까지 계산해 정했어요)`;
+  const sect4=sect("십 년의 계절 — 대운","계산", luckHtml+curTxt+`<p class="note">${luckNote}</p>`);
 
-  /* ══ 테마 리포트 (잠금 상품) ══ */
+  /* ── 6. 다섯 가지 질문 (무료 요약 → 리포트 훅) ── */
   const years5=yearlyFortune(P,nowYear,5);
   const gender=r.input.gender||"F";
+  const goDeep=`<button class="go-deep" data-scroll="report">심층 리포트에서 더 깊게 →</button>`;
 
-  /* ── 五: 배우자·인연운 ── */
-  const iljiGod=tenGodBranch(ds,P.day.branch);
-  const iljiStage=twelveStage(ds,P.day.branch);
-  const hongranSal=sals.find(s=>s.name==="홍란·천희");
-  const ssi=SPOUSE_STAR_INFO[gender];
-  let spCount=0, spWhere=[];
-  for(const [key,lab] of posOrder){ const p=P[key]; if(!p) continue;
-    if(key!=="day"){ const g1=tenGod(ds,p.stem); if(ssi.stars.includes(g1)){spCount++; spWhere.push(lab.replace("주","간")+" "+g1);} }
-    const g2=tenGodBranch(ds,p.branch); if(ssi.stars.includes(g2)){spCount++; spWhere.push(lab.replace("주","지")+" "+g2);} }
-  let loveHtml=`<p class="lede">${T(ssi)} ${T(SPOUSE_COUNT_TEXT[Math.min(spCount,3)])}</p>`;
-  if(spWhere.length) loveHtml+=`<p>내 사주 속 배우자 기운: <b>${spWhere.join(" · ")}</b></p>`;
-  loveHtml+=`<p><b>배우자 자리(일지) 풀이</b> — ${T(SPOUSE_PALACE_TEXT[iljiGod])}<br>자리의 계절은 <b>${iljiStage}</b>: ${T(TWELVE_TEXT[iljiStage])}.</p>`;
-  if(hongranSal){
-    const yrsFor=br=>{const out=[];for(let yy=nowYear;yy<nowYear+30&&out.length<3;yy++){if(((yy-4)%12+12)%12===br)out.push(yy);}return out;};
-    const hy=yrsFor(hongranSal.hongran), cy=yrsFor(hongranSal.cheonhui);
-    loveHtml+=`<p>💮 <b>인연의 별 — 언제 켜지나</b><br>· 만남·연애 기운(홍란 ${BRANCHES_KO[hongranSal.hongran]})이 도는 해: <b>${hy.join(" · ")}</b>년<br>· 경사·결혼·득자 기운(천희 ${BRANCHES_KO[hongranSal.cheonhui]})이 도는 해: <b>${cy.join(" · ")}</b>년<br><span class="note">이 해들에 인연·경사 기운이 상대적으로 강한 편이에요. 확정이 아니라 "기운이 켜지는 해" 참고용 — 그 해에 사람을 만나거나 좋은 일이 잘 겹치는 경향으로 보세요.</span></p>`;
-  }
-  const bondYears=years5.filter(y=>y.events.some(e=>e.includes("합")||e.includes("인연"))||ssi.stars.includes(y.stemGod)||(hongranSal&&(y.branch===hongranSal.hongran||y.branch===hongranSal.cheonhui)));
-  if(bondYears.length) loveHtml+=`<p>🔔 <b>앞으로 5년 중 인연이 움직이는 해</b>: ${bondYears.map(y=>`<b>${y.year}</b>`).join(", ")}</p>`;
-  else loveHtml+=`<p>앞으로 5년은 인연 자리가 조용한 편 — 억지 타이밍보다 나를 채우는 시간으로 쓰기 좋은 구간입니다.</p>`;
-  loveHtml+=`<p>🤝 <b>천간이 합하는 상대</b>: ${DAY_MASTER_TEXT[STEM_HAP[STEMS[ds]]].title}(${STEM_HAP[STEMS[ds]]}) 일간 — 처음 만나도 오래 안 듯 편안한 조합의 고전적 공식입니다.</p>`;
-  const ch5=chapter("五","배우자·인연운","해석", loveHtml);
+  // 일
+  const groupMap={"비견":"비겁","겁재":"비겁","식신":"식상","상관":"식상","편재":"재성","정재":"재성","편관":"관성","정관":"관성","편인":"인성","정인":"인성"};
+  const groupCnt={"비겁":0,"식상":0,"재성":0,"관성":0,"인성":0};
+  Object.entries(gods).forEach(([g,n])=>{ groupCnt[groupMap[g]]+=n; });
+  const domGroup=Object.entries(groupCnt).sort((a,b)=>b[1]-a[1])[0];
+  const cg=CAREER_GROUP_TEXT[domGroup[0]];
+  const sals=shinsal(P,r.sajuYear);
+  let carHtml=`<p>당신은 <b>"${cg.title}"</b> 유형 — ${T(cg)}</p>`;
+  if(sals.find(s=>s.name.startsWith("현침"))) carHtml+=`<p>🪡 예리한 감각의 별(현침)이 있어 정밀·분석·의료·기술 쪽에 가산점이 붙어요.</p>`;
+  if(sals.find(s=>s.name.startsWith("화개"))) carHtml+=`<p>🎨 혼자 깊어지는 별(화개)이 있어 연구·예술 쪽 깊이가 무기가 돼요.</p>`;
 
-  /* ── 六: 재물 (잠금) ── */
+  // 돈
   const wealthGods=["정재","편재"];
   let wCount=0, wKind={정재:0,편재:0};
   for(const [key] of posOrder){ const p=P[key]; if(!p) continue;
     if(key!=="day"){ const g1=tenGod(ds,p.stem); if(wealthGods.includes(g1)){wCount++;wKind[g1]++;} }
     const g2=tenGodBranch(ds,p.branch); if(wealthGods.includes(g2)){wCount++;wKind[g2]++;} }
   const wc=Math.min(wCount,3);
-  let wealthHtml=`<p class="lede">${T(WEALTH_COUNT_TEXT[wc])}</p>`;
+  let wealthHtml=`<p>${T(WEALTH_COUNT_TEXT[wc])}</p>`;
   const mainW=wKind["정재"]>=wKind["편재"]?"정재":"편재";
   if(wCount>0) wealthHtml+=`<p>${T(WEALTH_STYLE[mainW])}</p>`;
   const moneyYears=years5.filter(y=>wealthGods.includes(y.stemGod)||wealthGods.includes(y.branchGod));
-  if(moneyYears.length) wealthHtml+=`<p>💰 <b>앞으로 5년 중 돈이 움직이는 해</b>: ${moneyYears.map(y=>`<b>${y.year}</b>(${y.stemGod}·${y.branchGod})`).join(", ")} — 기회이자 지출이니, 이 해엔 흐름을 미리 준비해두세요.</p>`;
-  // (돈그릇 구조 해석은 위 '오행·기질·구조'에서 다뤘으므로 여기선 반복하지 않고, 타이밍·관리 중심)
-  conditionalNotes(P).filter(n=>n.tag==="돈·사람").forEach(n=>{ wealthHtml+=`<p class="note">${T(n)}</p>`; });
-  const ch6=chapter("六","재물 — 나의 돈그릇","해석", wealthHtml);
+  if(moneyYears.length) wealthHtml+=`<p>💰 앞으로 5년 중 돈이 움직이는 해: ${moneyYears.map(y=>`<b>${y.year}</b>`).join(", ")}</p>`;
 
-  /* ── 七: 신년운세 (올해 + 월별) ── */
+  // 사랑
+  const iljiGod=tenGodBranch(ds,P.day.branch);
+  const hongranSal=sals.find(s=>s.name==="홍란·천희");
+  const ssi=SPOUSE_STAR_INFO[gender];
+  let spCount=0;
+  for(const [key] of posOrder){ const p=P[key]; if(!p) continue;
+    if(key!=="day"){ const g1=tenGod(ds,p.stem); if(ssi.stars.includes(g1)) spCount++; }
+    const g2=tenGodBranch(ds,p.branch); if(ssi.stars.includes(g2)) spCount++; }
+  let loveHtml=`<p>${T(SPOUSE_COUNT_TEXT[Math.min(spCount,3)])}</p>`;
+  loveHtml+=`<p><b>배우자 자리(일지)</b> — ${T(SPOUSE_PALACE_TEXT[iljiGod])}</p>`;
+  if(hongranSal){
+    const yrsFor=br=>{const out=[];for(let yy=nowYear;yy<nowYear+30&&out.length<3;yy++){if(((yy-4)%12+12)%12===br)out.push(yy);}return out;};
+    loveHtml+=`<p>💮 인연 기운이 켜지는 해: <b>${yrsFor(hongranSal.hongran).join(" · ")}</b> / 경사 기운: <b>${yrsFor(hongranSal.cheonhui).join(" · ")}</b> — 확정이 아니라 "기운이 들어오는 해"로 봐 주세요.</p>`;
+  }
+  loveHtml+=`<p>🤝 처음 만나도 오래 알던 사이처럼 편한 상대: <b>${hapTitle}(${hapStem}) 일간</b> — 고전의 천간합 공식이에요.</p>`;
+
+  // 올해
   const thisYF=years5[0];
-  let nyHtml=`<p class="lede">${nowYear}년(${gzDisp(thisYF.stem,thisYF.branch)}년)은 나에게 <b>${thisYF.stemGod}·${thisYF.branchGod}</b>의 해 — ${T(TEN_GOD_TEXT[thisYF.stemGod])}.</p>`;
+  let nyHtml=`<p>${nowYear}년(${gzDisp(thisYF.stem,thisYF.branch)}년)은 나에게 <b>${thisYF.stemGod}·${thisYF.branchGod}</b>의 해 — ${T(TEN_GOD_TEXT[thisYF.stemGod])}.</p>`;
   thisYF.events.forEach(e2=>{ nyHtml+=`<p class="yevent">✨ ${e2}</p>`; });
   const yStemIdx=((nowYear-4)%10+10)%10;
   const inStemTbl=[2,4,6,8,0];
   const YUKHAP2={0:1,1:0,2:11,11:2,3:10,10:3,4:9,9:4,5:8,8:5,6:7,7:6};
-  let mHtml=`<div class="month-grid">`;
-  for(let mi2=0; mi2<12; mi2++){
+  // 열두 달 중 여섯 달만 무료 — 나머지는 리포트의 몫 (경계를 콘텐츠 층에서)
+  let mHtml=`<details class="fold"><summary>올해 여섯 달 리듬 보기</summary><div class="month-grid">`;
+  for(let mi2=0; mi2<6; mi2++){
     const ms=(inStemTbl[yStemIdx%5]+mi2)%10, mb=(mi2+2)%12;
     const mg=tenGod(ds,ms);
     const rel=[];
@@ -285,118 +322,113 @@ function render(r){
     if(((mb-P.day.branch)%12+12)%12===6) rel.push("⚡");
     mHtml+=`<div class="mcard ${rel.length?"mark":""}"><b>${MONTH_RANGE_LABEL[mi2]}</b><span class="mgz">${gzDisp(ms,mb)}</span><span class="mgod">${mg}${rel.join("")}</span><p>${MONTH_TIP[mg]}</p></div>`;
   }
-  mHtml+=`</div><p class="note">월 경계는 절기 기준(날짜는 근사) · 💞=배우자궁과 합(관계·협력의 달) ⚡=배우자궁과 충(변동의 달)</p>`;
-  const ch7=chapter("七",`${nowYear} 신년운세 — 열두 달의 리듬`,"해석", nyHtml+mHtml);
+  mHtml+=`</div><p class="note">월 경계는 절기 기준 · 💞=배우자궁과 합 ⚡=배우자궁과 충 · 남은 여섯 달은 심층 리포트에서 다뤄요</p></details>`;
 
-  /* ── 八: 직업·적성운 ── */
-  const groupMap={"비견":"비겁","겁재":"비겁","식신":"식상","상관":"식상","편재":"재성","정재":"재성","편관":"관성","정관":"관성","편인":"인성","정인":"인성"};
-  const groupCnt={"비겁":0,"식상":0,"재성":0,"관성":0,"인성":0};
-  Object.entries(gods).forEach(([g,n])=>{ groupCnt[groupMap[g]]+=n; });
-  const domGroup=Object.entries(groupCnt).sort((a,b)=>b[1]-a[1])[0];
-  const cg=CAREER_GROUP_TEXT[domGroup[0]];
-  let carHtml=`<p class="lede">내 사주에서 가장 큰 기운은 <b>${domGroup[0]}</b>(${domGroup[1]}개) — 당신은 <b>"${cg.title}"</b> 유형입니다.</p><p>${T(cg)}</p>`;
-  // (십성 조합 구조는 위 '오행·기질·구조'에서 다뤘으므로 여기선 직군·신살 중심으로만)
-  if(sals.find(s=>s.name.startsWith("현침"))) carHtml+=`<p>🪡 현침살 보유 — 정밀·분석·의료·기술 계열에 추가 가산점이 붙는 구조.</p>`;
-  if(sals.find(s=>s.name.startsWith("화개"))) carHtml+=`<p>🎨 화개 보유 — 연구·예술·정신세계 쪽 깊이가 무기가 됩니다.</p>`;
-  carHtml+=`<p><b>계절 처방과 연결하면</b> — ${JOHU_HINT[STEM_ELEM[ds]][season]}. 일과 환경을 고를 때 이 보약 기운을 곁에 두는 게 전통적 개운법입니다.</p>`;
-  const ch8=chapter("八","직업·적성 — 나의 쓰임","해석", carHtml);
-
-  /* ── 九: 오년의 달력 (잠금) ── */
-  let calHtml=`<div class="year-cards">`;
-  years5.forEach(yf=>{
-    calHtml+=`<div class="ycard"><h4>${yf.year} <span>${gzDisp(yf.stem,yf.branch)}</span></h4>
-      <p class="ygods">${yf.stemGod} · ${yf.branchGod}</p><p>${T(TEN_GOD_TEXT[yf.stemGod])}</p>
-      ${yf.events.map(e2=>`<p class="yevent">✨ ${e2}</p>`).join("")}</div>`;
+  // 달력: 올해·내년만 상세 — 그 뒤는 리포트에서 (10년 달력)
+  let calHtml=`<details class="fold"><summary>다가오는 해 미리 보기</summary><div class="year-cards">`;
+  years5.forEach((yf,i)=>{
+    if(i<2){
+      calHtml+=`<div class="ycard"><h4>${yf.year} <span>${gzDisp(yf.stem,yf.branch)}</span></h4>
+        <p class="ygods">${yf.stemGod} · ${yf.branchGod}</p><p>${T(TEN_GOD_TEXT[yf.stemGod])}</p>
+        ${yf.events.map(e2=>`<p class="yevent">✨ ${e2}</p>`).join("")}</div>`;
+    } else {
+      calHtml+=`<div class="ycard dim"><h4>${yf.year} <span>${gzDisp(yf.stem,yf.branch)}</span></h4>
+        <p class="note">이 해의 흐름과 나머지 10년은 심층 리포트에서</p></div>`;
+    }
   });
-  calHtml+=`</div><p class="note">세운은 대운보다 신뢰도가 한 단계 낮은 것이 전통 통설입니다 — 큰 흐름은 대운으로, 해의 리듬은 세운으로 보세요.</p>`;
-  const ch9=chapter("九","오년의 달력","해석", calHtml);
+  calHtml+=`</div></details>`;
 
+  const domainsHtml=
+    `<div class="domain-card"><h3>💼 어떤 일이 맞을까</h3>${carHtml}${goDeep}</div>`
+    +`<div class="domain-card"><h3>💰 내 돈그릇은</h3>${wealthHtml}${goDeep}</div>`
+    +`<div class="domain-card"><h3>💞 사랑과 인연은</h3>${loveHtml}${goDeep}</div>`
+    +`<div class="domain-card"><h3>🗓 올해는 어떤 해</h3>${nyHtml}${mHtml}${calHtml}${goDeep}</div>`;
+  const sect5=sect("네 가지 질문","해석",domainsHtml+`<p class="note">여기까지는 요약이에요. 나이대별 타임라인·10년 달력·행동 처방은 심층 리포트가 깊게 다뤄요.</p>`,"free-end");
+
+  /* ── 7. 별 (신살) ── */
+  let salHtml="";
+  sals.forEach(s=>{
+    const key=Object.keys(SHINSAL_TEXT).find(k=>s.name.startsWith(k.replace(/\(.*\)/,"")))||Object.keys(SHINSAL_TEXT).find(k=>s.name.startsWith(k));
+    salHtml+=`<div class="sal ${s.absent?'absent':''}"><b>${s.name}</b> <span class="where">${s.where}</span><p>${key?T(SHINSAL_TEXT[key]):""}${s.absent?" — 지금은 없고, 들어오는 시기가 포인트예요.":""}</p></div>`;
+  });
+  const sect6=sect("타고난 별들","해석", `<details class="fold" open><summary>내 신살 보기</summary>${salHtml}</details><p class="note">신살은 보조 지표예요 — 관리 포인트로만 읽어 주세요.</p>`);
+
+  /* ── 실천 팁 ── */
   const tips=actionTips(P);
-  const tipsHtml=`<section class="chapter tips-block">
-    <div class="ch-head"><span class="ch-no">用</span><h2>이럴 땐 이렇게 — 실천 팁</h2><span class="badge badge-interp">조언</span></div>
-    <p class="chat-note">계산된 구조에서 뽑은, 오늘부터 써먹을 조언이에요.</p>
-    ${tips.map((t,i)=>`<p class="tip">✅ ${t}</p>`).join("")}
-    <p class="note">전통 통설 기반 참고예요 — 의료·법률·투자는 전문가 상담이 우선입니다.</p>
-  </section>`;
-  el.innerHTML=cardHtml+`<div class="book">`+ch0+ch1+ch2+ch3+ch4+ch5+ch6+ch7+ch8+ch9+`</div>`+tipsHtml+`
-    <section class="chapter outro">
-      <p class="outro-line">계산은 여기까지가 사실이고, 해석은 여기까지가 전통입니다.<br>나머지는 당신이 씁니다.</p>
-      <button class="btn secondary" id="copy-text">텍스트 요약 복사</button>
-    </section>`;
+  const tipsHtml=sect("오늘부터 이렇게","조언", tips.map(t=>`<p class="tip">✅ ${t}</p>`).join("")+`<p class="note">전통 통설 기반 참고예요 — 의료·법률·투자는 전문가와 상의하세요.</p>`);
 
-  document.querySelectorAll(".unlock-btn").forEach(b=>b.addEventListener("click",()=>{
-    const s=document.getElementById(b.dataset.target);
-    s.classList.remove("locked"); s.querySelector(".paywall").remove();
-    toast("열렸어요 — 오픈 기념 무료");
-  }));
+  el.innerHTML=idCard+sect1+sect2+sect3+sect4+sect5+sect6+tipsHtml;
+
   document.getElementById("save-card").addEventListener("click",()=>drawTalisman(r,label,season,hapTitle,hapStem,motherElem));
   document.getElementById("copy-link").addEventListener("click",()=>{
-    navigator.clipboard.writeText(location.href).then(()=>toast("링크를 복사했어요 — 붙여넣으면 이 결과가 그대로 열립니다"));
+    navigator.clipboard.writeText(location.href).then(()=>toast("링크를 복사했어요 — 붙여넣으면 이 결과가 그대로 열려요"));
   });
-  document.getElementById("copy-text").addEventListener("click",()=>{
-    const txt=`[맑은사주] 나는 "${label}"\n명식: ${P.hour?gzKo(P.hour)+"시 ":""}${gzKo(P.day)}일 ${gzKo(P.month)}월 ${gzKo(P.year)}년\n합이 드는 상대: ${hapTitle}(${hapStem}) · 나를 채우는 기운: ${ELEM_KO[motherElem]}\n${location.href}`;
-    navigator.clipboard.writeText(txt).then(()=>toast("요약을 복사했어요"));
-  });
-  // 대화(Claude 백엔드) 마운트 — chat.js 로드 시에만
+  // 대화·리포트 마운트 (chat.js)
   if (window.mountSajuChat) try{ window.mountSajuChat(r); }catch(_e){}
+  // '더 깊게' 버튼 → 리포트로 스크롤
+  const scrollToReport=()=>{ const t=document.querySelector(".report-cta"); if(t) t.scrollIntoView({behavior:"smooth", block:"center"}); };
+  document.querySelectorAll(".go-deep").forEach(b=>b.addEventListener("click",scrollToReport));
+  // 하단 고정 CTA — 리포트가 화면에 보이면 숨김
+  let bar=document.getElementById("bottom-cta");
+  if(!bar){
+    bar=document.createElement("div"); bar.id="bottom-cta"; bar.className="bottom-cta";
+    bar.innerHTML=`<button class="btn">내 심층 리포트 받기 — 오픈 기념 무료</button>`;
+    document.body.appendChild(bar);
+    bar.querySelector("button").addEventListener("click",scrollToReport);
+  }
+  bar.classList.remove("hidden");
+  const rc=document.querySelector(".report-cta");
+  if(rc && "IntersectionObserver" in window){
+    new IntersectionObserver(es=>{
+      es.forEach(en=>bar.classList.toggle("hidden", en.isIntersecting));
+    },{threshold:0.15}).observe(rc);
+  }
   updateProgress();
 }
 
-/* ── 부적 카드 이미지 (1080×1920 인스타 스토리) ── */
+/* ── 공유 카드 이미지 (1080×1920, 다크 아이덴티티) ── */
 function drawTalisman(r,label,season,hapTitle,hapStem,motherElem){
   const P=r.pillars;
   const c=document.createElement("canvas"); c.width=1080; c.height=1920;
   const x=c.getContext("2d");
   document.fonts.load('700 100px "Noto Serif KR"').then(()=>document.fonts.ready).then(()=>{
-    // 한지 배경
-    x.fillStyle="#f3ecdd"; x.fillRect(0,0,1080,1920);
-    // 미세 질감
-    for(let i=0;i<900;i++){ x.fillStyle=`rgba(120,100,70,${Math.random()*0.05})`; x.fillRect(Math.random()*1080,Math.random()*1920,2,2); }
-    // 이중 테두리 (부적 프레임)
-    x.strokeStyle="#b5493a"; x.lineWidth=10; x.strokeRect(50,50,980,1820);
-    x.lineWidth=3; x.strokeRect(80,80,920,1760);
-    // 상단
-    x.fillStyle="#8a7a5c"; x.font='500 40px "Noto Serif KR", serif'; x.textAlign="center";
-    x.fillText("四 柱 · "+SEASON_NAMES[season], 540, 220);
-    // 라벨 (핵심)
-    x.fillStyle="#241f18"; x.font='700 95px "Noto Serif KR", serif';
+    x.fillStyle="#191F28"; x.fillRect(0,0,1080,1920);
+    // 미세 별점 질감
+    for(let i=0;i<400;i++){ x.fillStyle=`rgba(245,238,220,${Math.random()*0.08})`; x.fillRect(Math.random()*1080,Math.random()*1920,2,2); }
+    x.strokeStyle="#A9853B"; x.lineWidth=3; x.strokeRect(60,60,960,1800);
+    x.fillStyle="#8B95A1"; x.font='500 38px "Pretendard Variable", sans-serif'; x.textAlign="center";
+    x.fillText(SEASON_NAMES[season]+" · "+r.sajuYear+"년생", 540, 220);
+    x.fillStyle="#F5EEDC"; x.font='700 95px "Noto Serif KR", serif';
     const words=label.split(" ");
-    let ly=460;
+    let ly=430;
     if(words.length>2){ x.fillText(words.slice(0,2).join(" "),540,ly); x.fillText(words.slice(2).join(" "),540,ly+130); ly+=130; }
     else { x.fillText(label,540,ly+60); ly+=60; }
-    // 명식 세로 4주
     const order=["year","month","day","hour"];
     const startX=270, gap=180;
     x.font='700 110px "Noto Serif KR", serif';
     order.forEach((k,i)=>{
       const p=P[k]; const cx=startX+i*gap;
-      if(!p){ x.fillStyle="#b3a88f"; x.fillText("—",cx,ly+320); x.fillText("—",cx,ly+460); return; }
-      x.fillStyle=ELEM_COLOR[STEM_ELEM[p.stem]]; x.fillText(STEMS[p.stem],cx,ly+320);
-      x.fillStyle=ELEM_COLOR[BRANCH_ELEM[p.branch]]; x.fillText(BRANCHES[p.branch],cx,ly+460);
+      if(!p){ x.fillStyle="#4E5968"; x.fillText("—",cx,ly+320); x.fillText("—",cx,ly+460); return; }
+      x.fillStyle=ELEM_COLOR_DARK[STEM_ELEM[p.stem]]; x.fillText(STEMS[p.stem],cx,ly+320);
+      x.fillStyle=ELEM_COLOR_DARK[BRANCH_ELEM[p.branch]]; x.fillText(BRANCHES[p.branch],cx,ly+460);
     });
-    x.fillStyle="#8a7a5c"; x.font='400 34px "Noto Serif KR", serif';
+    x.fillStyle="#6B7684"; x.font='400 34px "Pretendard Variable", sans-serif';
     ["년","월","일","시"].forEach((t,i)=>x.fillText(t,startX+i*gap,ly+540));
-    // 구분선
-    x.strokeStyle="#c9b98f"; x.lineWidth=2;
+    x.strokeStyle="#333D4B"; x.lineWidth=2;
     x.beginPath(); x.moveTo(200,ly+620); x.lineTo(880,ly+620); x.stroke();
-    // 궁합 태그
-    x.fillStyle="#241f18"; x.font='500 44px "Noto Serif KR", serif';
-    x.fillText(`합이 드는 상대 · ${hapTitle}`, 540, ly+730);
+    x.fillStyle="#F5EEDC"; x.font='500 44px "Pretendard Variable", sans-serif';
+    x.fillText(`잘 맞는 상대 · ${hapTitle}`, 540, ly+730);
     x.fillText(`나를 채우는 기운 · ${ELEM_KO[motherElem]}`, 540, ly+810);
-    // 인장
-    x.fillStyle="#b5493a";
-    x.beginPath(); x.arc(540, 1650, 95, 0, Math.PI*2); x.fill();
-    x.fillStyle="#f3ecdd"; x.font='700 52px "Noto Serif KR", serif';
-    x.fillText("맑은",540,1635); x.fillText("사주",540,1695);
-    // URL
-    x.fillStyle="#8a7a5c"; x.font='400 30px "Noto Serif KR", serif';
-    x.fillText("malgeun-saju",540,1810);
+    x.fillStyle="#A9853B"; x.font='700 40px "Noto Serif KR", serif';
+    x.fillText("맑은사주",540,1760);
+    x.fillStyle="#6B7684"; x.font='400 26px "Pretendard Variable", sans-serif';
+    x.fillText("내 사주도 무료로 — 맑은사주 검색",540,1815);
     c.toBlob(blob=>{
       const a=document.createElement("a");
       a.href=URL.createObjectURL(blob);
       a.download=`맑은사주_${label.replace(/\s/g,"")}.png`;
       a.click(); URL.revokeObjectURL(a.href);
-      toast("부적 카드를 저장했어요 — 스토리에 올려보세요");
+      toast("카드를 저장했어요 — 스토리에 올려보세요");
     },"image/png");
   });
 }

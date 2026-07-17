@@ -178,24 +178,43 @@ window.mountSajuChat = function (r) {
   CHAT_HISTORY = [];
   MY_R = r;
   CHAT_CTX = buildReportContext(r);   // 대화도 풀 컨텍스트로 — 구체적 연도·구조 근거 답변
-  logSaju(r, "사주조회");
   const host = document.getElementById("result");
   if (!host) return;
   const old = document.getElementById("saju-chat");
   if (old) old.remove();
+  const oldReport = document.getElementById("report-box");
+  if (oldReport) oldReport.remove();
+
+  // ── 심층 리포트: 무료 요약 섹션 바로 뒤에 (summary-then-paywall 동선) ──
+  const P = r.pillars, ds = P.day.stem;
+  const now = new Date().getFullYear();
+  const curLuck = r.luckPillars.find(lp => now >= lp.startYear && now < lp.startYear + 10);
+  const cntEl = elementCount(P);
+  const zeroEls = ["목", "화", "토", "금", "수"].filter(e => cntEl[e] === 0);
+  const tocTimeline = curLuck ? `${curLuck.startAge}~${curLuck.startAge + 9}세 ${tenGod(ds, curLuck.stem)} 대운 타임라인` : "나이대별 타임라인";
+  const tocRx = zeroEls.length ? `${zeroEls.map(e => ELEM_KO[e]).join("·")} 없는 사주를 위한 처방 5가지` : "이 사주를 위한 처방 5가지";
+  const reportBox = el("section", "report-cta");
+  reportBox.id = "report-box";
+  reportBox.innerHTML = `
+      <h2 class="report-title">나만을 위한 심층 리포트</h2>
+      <p class="report-sub">위 요약은 시작이에요. 여덟 글자, 대운 여덟 개, 앞으로 10년 — 계산된 내 사주 전체를 근거로 쓰는 긴 리포트예요. 리포트가 눈앞에서 한 줄씩 완성돼요.</p>
+      <div class="report-toc">
+        <span>당신을 한 문장으로</span><span>빛과 그림자</span><span>일과 돈</span><span>사랑의 시기</span><span>${tocTimeline}</span><span>10년 달력</span><span>${tocRx}</span>
+      </div>
+      <p class="report-price"><b class="free">지금은 오픈 기념 무료</b></p>
+      <p class="report-anchor">정식 오픈 후 9,900원 — 시중 앱 심층 리포트는 보통 1~2만 원대예요.</p>
+      <button class="btn" id="report-go">내 리포트 받기</button>
+      <div id="report-out" class="report-out"></div>`;
+  const freeEnd = document.getElementById("free-end");
+  if (freeEnd && freeEnd.parentNode) freeEnd.parentNode.insertBefore(reportBox, freeEnd.nextSibling);
+  else host.appendChild(reportBox);
 
   const box = el("section", "chat-box");
   box.id = "saju-chat";
   box.innerHTML = `
-    <div class="report-cta">
-      <h2 class="report-title">✨ 나만의 심층 리포트</h2>
-      <p class="report-sub">계산된 내 사주 <b>전체</b>(여덟 글자·대운·앞으로 10년 세운까지)를 근거로, <b>쉬운 말로 깊게</b> 풀어드려요 — 성격·일·돈·인연·건강·10년 달력·처방전까지. 글이 실시간으로 내려옵니다. <del>990원</del> <b>오픈 기념 무료</b></p>
-      <button class="btn" id="report-go">내 심층 리포트 받기</button>
-      <div id="report-out" class="report-out"></div>
-    </div>
-    <div class="chat-head"><span class="ch-no">問</span><h2>사주에게 물어보기</h2>
+    <div class="chat-head"><h2>사주에게 물어보기</h2>
       <span class="badge badge-interp">대화</span></div>
-    <p class="chat-note">계산된 내 사주에 근거해 답합니다. 해석은 전통 통설 참고용이에요.</p>
+    <p class="chat-note">계산된 내 사주를 근거로 답해요. 해석은 전통 통설 참고예요.</p>
     <div class="chat-log" id="chat-log"></div>
     <div class="chat-input-row">
       <input id="chat-input" type="text" placeholder="예: 올해 이직해도 될까요?" autocomplete="off">
@@ -208,9 +227,9 @@ window.mountSajuChat = function (r) {
       <button data-q="돈은 어떻게 관리하는 게 좋아?">재물 관리</button>
     </div>
     <div class="chat-compat">
-      <button class="btn secondary" id="compat-toggle">💑 다른 사람과 궁합 보기</button>
+      <button class="btn secondary" id="compat-toggle">💞 궁합 보기 — 지금은 무료 (정식 오픈 후 4,900원)</button>
       <div class="compat-form hidden" id="compat-form">
-        <p class="compat-note">상대(남친·친구 등) 생년월일을 넣으면, 두 사주를 계산해 궁합을 봐드려요.</p>
+        <p class="compat-note">상대 생년월일을 넣으면 두 사주를 계산해 교차 관계(합·충·오행 보완)를 근거로 궁합을 봐드려요.</p>
         <div class="compat-fields">
           <input id="p-year" type="number" placeholder="년(예 1994)" inputmode="numeric">
           <input id="p-month" type="number" placeholder="월" inputmode="numeric">
@@ -244,7 +263,8 @@ window.mountSajuChat = function (r) {
     box.querySelector("#compat-form").classList.toggle("hidden");
   });
   box.querySelector("#compat-go").addEventListener("click", submitCompat);
-  box.querySelector("#report-go").addEventListener("click", generateReport);
+  const rgo = document.getElementById("report-go");
+  if (rgo) rgo.addEventListener("click", generateReport);
 
   if (!WORKER_URL) {
     addMsg("assistant", "사주에게 직접 물어보는 대화 기능을 준비 중이에요 🙏 곧 열립니다.");
@@ -261,14 +281,21 @@ function submitCompat() {
   const ci = +box.querySelector("#p-city").value || 0;
   const lon = (typeof CITIES !== "undefined" && CITIES[ci]) ? CITIES[ci].lon : 127.5;
   const name = (typeof CITIES !== "undefined" && CITIES[ci]) ? CITIES[ci].name : "모름";
-  if (!y || !m || !d || y < 1900 || y > 2050) { alert("상대 생년월일을 확인해주세요 (년/월/일)"); return; }
+  const compatError = msg => {
+    const form = box.querySelector("#compat-form");
+    let em = form.querySelector(".field-msg");
+    if (!msg) { if (em) em.remove(); return; }
+    if (!em) { em = el("p", "field-msg"); form.insertBefore(em, form.querySelector("#compat-go")); }
+    em.textContent = msg;
+  };
+  if (!y || !m || !d || y < 1900 || y > 2050) { compatError("상대 생년월일을 확인해 주세요 (년/월/일)"); return; }
   const dt = new Date(y, m - 1, d);
-  if (dt.getMonth() !== m - 1 || dt.getDate() !== d) { alert("존재하지 않는 날짜입니다"); return; }
+  if (dt.getMonth() !== m - 1 || dt.getDate() !== d) { compatError("존재하지 않는 날짜예요"); return; }
   const input = { year: y, month: m, day: d, hour: hourUnknown ? 12 : +hv, minute: 0, hourUnknown, gender: g, longitude: lon, placeName: name };
   let pR;
-  try { pR = computeSaju(input); } catch (e) { alert("계산 오류: " + (e.message || e)); return; }
+  try { pR = computeSaju(input); } catch (e) { compatError("계산이 어려운 날짜예요 — 다시 확인해 주세요"); return; }
+  compatError(null);
 
-  logSaju(pR, "궁합상대");
   CHAT_CTX = buildCompatText(MY_R, pR);
   CHAT_HISTORY = [];
   box.querySelector("#compat-form").classList.add("hidden");
@@ -352,7 +379,7 @@ async function generateReport() {
   btn.disabled = true;
   const label = btn.textContent;
   btn.textContent = "리포트 쓰는 중…";
-  out.innerHTML = '<p class="typing" style="padding:14px 2px">✍️ 당신의 사주를 깊게 읽는 중이에요 — 곧 첫 문장이 내려옵니다…</p>';
+  out.innerHTML = '<p class="typing" style="padding:14px 2px">✍️ 당신의 사주를 깊게 읽는 중이에요 — 첫 문장을 쓰고 있어요…</p>';
   let ok = false;
   try {
     const resp = await fetch(WORKER_URL, {
@@ -411,21 +438,7 @@ function mdToHtml(md) {
   return html;
 }
 
-/* ---- 이용 기록 (조회·궁합) beacon ---- */
-function logSaju(r, type) {
-  if (!WORKER_URL) return;
-  const i = r.input || {}, P = r.pillars;
-  const gz = k => P[k] ? STEMS[P[k].stem] + BRANCHES[P[k].branch] : "";
-  const ev = {
-    type: type || "사주조회",
-    생년월일: `${i.year}-${String(i.month).padStart(2, "0")}-${String(i.day).padStart(2, "0")}`,
-    시: i.hourUnknown ? "모름" : (String(i.hour).padStart(2, "0") + ":" + String(i.minute || 0).padStart(2, "0")),
-    성별: i.gender === "M" ? "남" : "여",
-    지역: i.placeName || "",
-    명식: `${gz("year")} ${gz("month")} ${gz("day")} ${gz("hour")}`,
-  };
-  try { fetch(WORKER_URL, { method: "POST", headers: { "content-type": "application/json" }, keepalive: true, body: JSON.stringify({ mode: "log", event: ev }) }); } catch (_e) {}
-}
+/* 무료 계산은 100% 로컬 — 서버 기록은 대화·리포트를 실제 사용할 때만 백엔드에서 남긴다 (고지와 일치) */
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>

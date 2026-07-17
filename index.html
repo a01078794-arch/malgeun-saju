@@ -3,29 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://*.vercel.app; base-uri 'none'; form-action 'self'">
-<title>맑은사주 — 당신에 관한 가장 정직한 문집</title>
-<meta name="description" content="진태양시·서머타임·절기까지 천문 계산으로 검증하는 사주. 계산과 해석을 분리해 보여주고, 쉬운말/전문가 모드를 고를 수 있습니다. 결과는 부적 카드로 저장하세요.">
-<meta property="og:title" content="맑은사주 — 당신에 관한 가장 정직한 문집">
-<meta property="og:description" content="나는 어떤 계절의 무엇으로 태어났을까. 계산은 정직하게, 해석은 겁 없이.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net 'unsafe-inline'; font-src https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src https://*.vercel.app; base-uri 'none'; form-action 'self'">
+<title>맑은사주 — 계산부터 다른 사주</title>
+<meta name="description" content="진태양시·절기까지 천문 계산으로 여덟 글자를 세우고, 그 계산을 전부 보여드립니다. 내 사주 캐릭터, 오행 지도, 10년 흐름, 그리고 나만을 위한 심층 리포트.">
+<meta property="og:title" content="맑은사주 — 계산부터 다른 사주">
+<meta property="og:description" content="나는 어떤 계절의 무엇으로 태어났을까. 여덟 글자로 확인해 보세요.">
 <meta property="og:type" content="website">
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Serif+KR:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23b5493a'/><text x='50' y='66' font-size='44' text-anchor='middle' fill='%23f3ecdd'>命</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23191F28'/><text x='50' y='68' font-size='48' text-anchor='middle' fill='%23F5EEDC'>命</text></svg>">
 </head>
 <body>
 <div id="progress-wrap" class="hidden"><div id="read-progress"></div></div>
 <div class="wrap">
   <header>
     <div class="logo">맑은사주<span class="dot">.</span></div>
-    <p class="tagline">당신에 관한 가장 정직한 문집 한 권</p>
-    <div class="usp">
-      <span>🔭 <b>진태양시·절기</b> 천문 계산 공개</span>
-      <span>⚖️ <b>계산 vs 해석</b> 구분 표시</span>
-      <span>💬 <b>쉬운말 / 전문가</b> 모드</span>
-      <span>🚫 광고 · 겁주기 없음</span>
+    <p class="tagline">계산부터 다른 사주</p>
+    <div class="trust-chips">
+      <span>🔭 진태양시·절기 천문 계산</span>
+      <span>⚖️ 계산과 해석 구분 표시</span>
+      <span>📖 계산 과정 전부 공개</span>
     </div>
     <div class="mode-toggle">
       <button class="mode-btn" data-mode="easy">쉬운말</button>
@@ -34,6 +34,8 @@
   </header>
 
   <section class="card">
+    <h2 class="form-title">나는 어떤 계절의<br>무엇으로 태어났을까</h2>
+    <p class="form-sub">생년월일시로 여덟 글자를 세워드려요. 무료예요.</p>
     <form id="saju-form">
       <div class="row">
         <div class="field"><label>년 (양력)</label><input type="number" inputmode="numeric" id="year" placeholder="1994" min="1900" max="2050" required></div>
@@ -45,32 +47,31 @@
         <div class="field"><label>분</label><input type="number" inputmode="numeric" id="minute" placeholder="30" min="0" max="59" value="0"></div>
         <div class="field"><label>성별</label><select id="gender"><option value="F">여성</option><option value="M">남성</option></select></div>
       </div>
-      <label class="check"><input type="checkbox" id="hour-unknown"> 태어난 시간을 몰라요 <small>(시주 빼고 3주만 정직하게 봅니다)</small></label>
+      <label class="check"><input type="checkbox" id="hour-unknown"> 태어난 시간을 몰라요 <small>(시주 빼고 세 기둥으로 봐요)</small></label>
       <div class="row">
-        <div class="field"><label>출생 지역 (진태양시 보정용)</label><select id="city"></select></div>
+        <div class="field"><label>태어난 지역 — 도시마다 해 위치가 달라 시간을 보정해요</label><select id="city"></select></div>
       </div>
-      <button type="submit" class="btn">나의 문집 펼치기 — 무료</button>
+      <button type="submit" class="btn">내 사주 보기</button>
     </form>
   </section>
 
   <div id="result" class="hidden"></div>
 
-  <section class="chapter">
-    <div class="ch-head"><span class="ch-no">跋</span><h2>이 문집이 다른 이유</h2></div>
+  <section class="sect">
+    <div class="sect-head"><h2>맑은사주가 일하는 방식</h2></div>
     <ul class="method">
-      <li><b>절기를 천문 계산합니다.</b> 입춘 전 출생은 전년도 연주로, 월 경계는 절기 '시각'까지 계산해 판정하고, 경계에 가까우면 경고를 띄웁니다. 정확도는 실측으로 밝힙니다: 한국천문연구원 계열 공표 역서와 9건 대조, 최대 오차 11분 (경계 경고는 ±24시간에서 발동하므로 오차의 130배를 커버).</li>
-      <li><b>진태양시로 시주를 세웁니다.</b> 출생지 경도 + 균시차 + 옛 표준시(1954–61) + 서머타임(1948–60, 1987–88)까지 반영하고, 보정 과정을 전부 보여드립니다.</li>
-      <li><b>계산과 해석을 구분합니다.</b> 파란 배지는 100% 재현 가능한 사실, 금색 배지는 명리학 고전(궁통보감·연해자평·삼명통회)의 통설 요약입니다.</li>
-      <li><b>겁주지 않습니다.</b> 신살은 관리 포인트로만 안내하고, 불안을 조성해 결제를 유도하지 않습니다.</li>
-      <li><b>개인정보를 정직하게 다룹니다.</b> 만세력 계산은 전부 이 브라우저 안에서 이뤄집니다. 대화·리포트 기능을 쓸 때는 계산된 사주와 질문이 저희 서버를 거쳐 AI에게 전달되고, 서비스 개선을 위해 이용 기록(생년월일·명식·질문)이 저장됩니다. 이름·연락처는 아예 받지 않습니다. '내 사주 링크'에는 생년월일이 담기니 공유 상대를 고르세요 — 조용히 공유하고 싶다면 부적 카드만 저장해 올리시면 됩니다.</li>
-      <li><b>한계를 밝힙니다.</b> 해석의 "100% 적중"은 존재하지 않습니다 — 존재한다고 말하는 곳을 조심하세요. 절기 시각은 천문 근사 계산이라 경계 출생(±수십 분)에서는 오차가 있을 수 있으며, 그 경우 경고를 띄웁니다.</li>
+      <li><b>절기를 천문 계산해요.</b> 입춘 전 출생은 전년도 연주로, 월 경계는 절기 '시각'까지 계산해 판정해요. 한국천문연구원 계열 공표 역서와 9건 대조해 최대 오차 11분 — 경계에 가까우면 미리 알려드려요.</li>
+      <li><b>진태양시로 시주를 세워요.</b> 출생지 경도, 균시차, 옛 표준시(1954–61), 서머타임(1948–60, 1987–88)까지 반영하고 그 과정을 전부 보여드려요.</li>
+      <li><b>계산과 해석을 구분해요.</b> 파란 표시는 100% 재현 가능한 계산, 금색 표시는 명리학 고전의 통설 요약이에요.</li>
+      <li><b>개인정보는 이렇게 다뤄요.</b> 만세력 계산은 전부 이 브라우저 안에서 끝나요. 대화·리포트 기능을 쓰면 계산된 사주와 질문이 서버를 거쳐 AI에게 전달되고, 서비스 개선용 이용 기록(생년월일·명식·질문)이 저장돼요. 이름·연락처는 받지 않아요. '내 사주 링크'에는 생년월일이 담기니 공유 상대를 골라 주세요.</li>
+      <li><b>한계도 말씀드려요.</b> 계산은 누구나 검증할 수 있게 공개하고, 해석은 참고가 되도록 근거와 함께 안내해요.</li>
     </ul>
   </section>
 
   <footer>
     맑은사주 © 2026 · 만세력 계산 검증 가능<br>
-    해석은 명리학 고전의 통설 요약이며 과학적으로 검증된 예측이 아닙니다.<br>
-    중요한 결정은 언제나 당신의 판단과 전문가(의료·법률·재무)의 조언이 우선입니다.
+    해석은 명리학 고전의 통설 요약이며 과학적으로 검증된 예측이 아니에요.<br>
+    중요한 결정은 언제나 당신의 판단과 전문가(의료·법률·재무)의 조언이 우선이에요.
   </footer>
 </div>
 <script src="js/manseryeok.js"></script>

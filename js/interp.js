@@ -42,28 +42,28 @@ function branchRelations(pillars){
       const tag=`${wa} ${an} ↔ ${wb} ${bn}`;
       if (((a-b)%12+12)%12===6){
         out.push({type:"충", a,b,posA:ka,posB:kb, priority:9,
-          easy:`${tag} — 서로 정면으로 부딪히는 두 자리예요. 변화·이동이 잦은 대신, 한번 정리되면 오히려 시원해집니다 (이런 관계를 '충'이라 불러요).`,
+          easy:`${tag} — 서로 정면으로 부딪히는 두 자리예요. 변화·이동이 잦은 대신, 한번 정리되면 오히려 시원해져요 (이런 관계를 '충'이라 불러요).`,
           expert:`${tag} 충 — 정면 대충. 해당 궁의 사안이 동(動)하는 구조, 용신 관련이면 길흉 진폭이 커진다.`});
       } else if (IREL_YUKHAP[a]===b){
         out.push({type:"육합", a,b,posA:ka,posB:kb, priority:6,
-          easy:`${tag} — 서로 끌어당겨 잘 묶이는 사이예요. 협력·인연이 붙기 쉬운 자리이자, 가끔 발이 묶이기도 합니다 (이런 관계를 '합'이라 불러요).`,
+          easy:`${tag} — 서로 끌어당겨 잘 묶이는 사이예요. 협력·인연이 붙기 쉬운 자리인데, 가끔 발이 묶이기도 해요 (이런 관계를 '합'이라 불러요).`,
           expert:`${tag} 육합 — 합거·합화의 결속. 해당 궁 사안이 묶여 안정 혹은 정체로 발현.`});
       } else if (a===b && IREL_SELFHYEONG.includes(a)){
         if(seenPair.has("self"+a)) continue; seenPair.add("self"+a);
         out.push({type:"자형", a,b,posA:ka,posB:kb, priority:5,
-          easy:`같은 글자 '${an}'이 겹쳐 있어요 — 고집·속앓이가 세지는 대신, 그 분야의 집요함은 남다릅니다 (이걸 '자형'이라 불러요).`,
+          easy:`같은 글자 '${an}'이 겹쳐 있어요 — 고집·속앓이가 세지는 대신, 그 분야의 집요함은 남달라요 (이걸 '자형'이라 불러요).`,
           expert:`${an}${an} 자형 — 동기 중복의 내향 형. 완고·자기소모 경향, 해당 오행 편중 심화.`});
       } else if ((a===0&&b===3)||(a===3&&b===0)){
         out.push({type:"상형", a,b,posA:ka,posB:kb, priority:5,
-          easy:`${tag} — 예의·관계에서 엇박이 나기 쉬운 자리예요. 말·문서를 분명히 하면 관리됩니다 (이런 관계를 '형'이라 불러요).`,
+          easy:`${tag} — 예의·관계에서 엇박이 나기 쉬운 자리예요. 말·문서를 분명히 하면 관리돼요 (이런 관계를 '형'이라 불러요).`,
           expert:`${tag} 자묘 상형(무례지형) — 관계 마찰 경향, 명문화가 처방.`});
       } else if (IREL_PA[a]===b && !inSameSamhyeong(a,b)){
         out.push({type:"파", a,b,posA:ka,posB:kb, priority:3,
-          easy:`${tag} — 살짝 어긋나는 자리예요. 영향이 약한 편이라 배경 소음 정도로 보면 됩니다 (이름은 '파').`,
+          easy:`${tag} — 살짝 어긋나는 자리예요. 영향이 약한 편이라 배경 소음 정도로 봐도 돼요 (이름은 '파').`,
           expert:`${tag} 파 — 경미한 파의 신살, 경중 낮음.`});
       } else if (IREL_HAE[a]===b && !inSameSamhyeong(a,b)){
         out.push({type:"해", a,b,posA:ka,posB:kb, priority:3,
-          easy:`${tag} — 가까울수록 사소한 서운함이 생기기 쉬운 자리예요. 기대치 관리가 요령입니다 (이름은 '해').`,
+          easy:`${tag} — 가까울수록 사소한 서운함이 생기기 쉬운 자리예요. 기대치 관리가 요령이에요 (이름은 '해').`,
           expert:`${tag} 육해 — 은근한 손상·서운의 신살, 경중 낮음.`});
       }
     }
@@ -77,12 +77,12 @@ function branchRelations(pillars){
     const glyphs = tri.map(x=>BRANCHES_KO[x]).join("");
     if (uniq.length===3){
       out.push({type:"삼합", elem:IREL_TRIAD_ELEM[ti], priority:8,
-        easy:`세 글자(${glyphs})가 뭉쳐 ${ELEM_KO[IREL_TRIAD_ELEM[ti]]} 기운의 큰 세력을 이뤄요 — 이 사주의 뚜렷한 힘의 방향입니다 (이걸 '삼합'이라 불러요).`,
+        easy:`세 글자(${glyphs})가 뭉쳐 ${ELEM_KO[IREL_TRIAD_ELEM[ti]]} 기운의 큰 세력을 이뤄요 — 이 사주의 뚜렷한 힘의 방향이에요 (이걸 '삼합'이라 불러요).`,
         expert:`${glyphs} 삼합국 성립 — ${IREL_TRIAD_ELEM[ti]}기 국세 형성, 격국 판단의 중심축.`});
     } else if (uniq.length===2 && uniq.includes(king)){
       const other = uniq.find(x=>x!==king);
       out.push({type:"반합", elem:IREL_TRIAD_ELEM[ti], priority:5,
-        easy:`${ELEM_KO[IREL_TRIAD_ELEM[ti]]} 기운이 절반쯤 뭉쳐 있어요(${BRANCHES_KO[king]}·${BRANCHES_KO[other]}) — 나머지 한 글자가 운에서 들어오는 해에 힘이 완성됩니다 (이걸 '반합'이라 불러요).`,
+        easy:`${ELEM_KO[IREL_TRIAD_ELEM[ti]]} 기운이 절반쯤 뭉쳐 있어요(${BRANCHES_KO[king]}·${BRANCHES_KO[other]}) — 나머지 한 글자가 운에서 들어오는 해에 힘이 완성돼요 (이걸 '반합'이라 불러요).`,
         expert:`${BRANCHES_KO[king]}${BRANCHES_KO[other]} 반합 — 왕지 포함 반국, 전실운에 성국.`});
     }
   });
@@ -95,7 +95,7 @@ function branchRelations(pillars){
     out.push({type:"삼형", priority: full?8:4,
       easy: full
         ? `세 글자(${have.map(x=>BRANCHES_KO[x]).join("·")})가 모여 시비·계약 변동이 커질 수 있는 축을 이뤄요 — 관련된 해엔 서류를 꼼꼼히 보세요 (이걸 '삼형'이라 불러요).`
-        : `${have.map(x=>BRANCHES_KO[x]).join("·")} 글자 사이에 은근한 마찰 기운이 있어요 — 무리한 확장보다 정리에 강한 구조입니다 (이름은 '형').`,
+        : `${have.map(x=>BRANCHES_KO[x]).join("·")} 글자 사이에 은근한 마찰 기운이 있어요 — 무리한 확장보다 정리에 강한 구조예요 (이름은 '형').`,
       expert:`${have.map(x=>BRANCHES_KO[x]).join("")} ${full?"삼형 전(全)":"형 부분"} — ${full?"지세지형/무은지형 완성, 관재·질병·계약 사안 주의":"형 기운 부분 성립"}.`});
   });
   out.sort((a,b)=>b.priority-a.priority);
@@ -114,7 +114,7 @@ function stemRelations(pillars){
       const tag=`${POS_KO_STEM[keys[i]]} ${STEMS_KO[sa]} ↔ ${POS_KO_STEM[keys[j]]} ${STEMS_KO[sb]}`;
       const inv = keys[i]==="day"||keys[j]==="day";
       out.push({type:"천간합", priority: inv?8:5, involvesDay:inv,
-        easy:`${tag} — 두 기운이 손을 잡고 ${ELEM_KO[IREL_STEMHAP_ELEM[sa]]} 쪽으로 향하는 배합이에요${inv?". 특히 나(일간)가 직접 잡는 손이라 크게 작용합니다":""} (이걸 '천간합'이라 불러요).`,
+        easy:`${tag} — 두 기운이 손을 잡고 ${ELEM_KO[IREL_STEMHAP_ELEM[sa]]} 쪽으로 향하는 배합이에요${inv?". 특히 나(일간)가 직접 잡는 손이라 크게 작용해요":""} (이걸 '천간합'이라 불러요).`,
         expert:`${tag} 천간합(化${IREL_STEMHAP_ELEM[sa]})${inv?" — 일간 합, 기반(羈絆)/합화 여부가 관건":""}.`});
     }
   }
@@ -138,7 +138,7 @@ function rootedness(pillars){
     easy = "일간이 지지에 뿌리가 거의 없는 편 — 혼자 버티기보다 '내 편(사람·공부·자격)'을 곁에 두면 훨씬 단단해지는 구조예요.";
     expert = "일간 무근(無根)에 가까움 — 인비의 부신 또는 종세(從勢) 논의 대상. 재관 태과 시 부담.";
   } else if (strong){
-    easy = `일간이 ${roots.map(k=>POS_KO_BRANCH[k]).join("·")}에 뿌리를 두고 있어요 — 밀어붙이고 감당하는 체력이 있는 자립형 구조입니다.`;
+    easy = `일간이 ${roots.map(k=>POS_KO_BRANCH[k]).join("·")}에 뿌리를 두고 있어요 — 밀어붙이고 감당하는 체력이 있는 자립형 구조예요.`;
     expert = `일간 통근 (${roots.map(k=>POS_KO_BRANCH[k]).join("·")}) — 유근 신주, 억부상 설기·극제를 감당.`;
   } else {
     easy = `일간의 뿌리가 ${roots.map(k=>POS_KO_BRANCH[k]).join("·")}에 얕게 있어요 — 평소엔 유연하다가 도움을 받는 운에 힘이 확 실리는 구조예요.`;
@@ -305,7 +305,7 @@ function actionTips(pillars){
   const add = t => { if (tips.length < 4 && !tips.includes(t)) tips.push(t); };
   if (keys.includes("재다신약")) add("큰돈은 혼자 안고 가기보다 <b>조직 소속·전문 자격·남의 돈을 다루는 일</b>이 유리해요. 동업·보증·큰 대여는 피하고, 들어온 돈은 자동이체로 묶어두세요.");
   if (keys.includes("식신생재")) add("<b>한 우물을 깊게 파는 전문성</b>이 그대로 돈이 되는 사주예요. 자격·기술을 꾸준히 쌓으면 안정적으로 벌립니다.");
-  if (keys.includes("상관생재")) add("순발력·기획·화제성이 돈이 되지만 <b>진폭이 큰</b> 편 — 잘 벌 때 미리 묶어두는(저축·고정자산) 습관이 관건이에요.");
+  if (keys.includes("상관생재")) add("순발력·기획·화제성이 돈이 되지만 <b>수입 오르내림이 큰</b> 편 — 잘 벌 때 미리 묶어두는(저축·고정자산) 습관이 관건이에요.");
   if (keys.includes("상관견관")) add("실력은 인정받되, 상사·규칙과 부딪힐 것 같을 땐 <b>한 템포 쉬고</b> 말하세요. 그 한 박자가 이 사주의 평생 무기예요.");
   if (keys.includes("군겁쟁재")) add("<b>돈과 사람은 섞지 마세요</b> — 동업·보증·지인 대여가 이 사주가 돈을 잃는 1순위 통로예요.");
   if (keys.includes("무인성")) add("기댈 언덕보다 실전으로 크는 타입 — <b>자격증 하나</b>를 의식적으로 챙기면 약점이 메워져요.");
@@ -329,11 +329,11 @@ function conditionalNotes(pillars){
       expert:"비겁 왕 — 쟁재 리스크. 재정 분리·단독 운용, 겁재 세운 경계."});
   }
   if ((g["편재"]||0)>=2 || (grp["재성"]>=2 && has(g,"편재"))){
-    notes.push({tag:"저축", easy:"굴리는 돈(편재)이 도드라진 사주 — 들어온 만큼 나가기 쉬우니 '월급날 자동 저축'을 걸어두는 게 평생 보약입니다.",
+    notes.push({tag:"저축", easy:"굴리는 돈(편재)이 도드라진 사주 — 들어온 만큼 나가기 쉬우니 '월급날 자동 저축'을 걸어두는 게 평생 보약이에요.",
       expert:"편재 우세 — 입출 큰 유동재. 강제 축장(자동이체·묶는 자산)이 처방."});
   }
   if (grp["식상"]>=3){
-    notes.push({tag:"에너지", easy:"표현·재능(식상)이 많은 사주 — 쏟아내는 만큼 방전도 빨라요. 쉼·수면·물 챙기기가 곧 실력 관리입니다.",
+    notes.push({tag:"에너지", easy:"표현·재능(식상)이 많은 사주 — 쏟아내는 만큼 방전도 빨라요. 쉼·수면·물 챙기기가 곧 실력 관리예요.",
       expert:"식상 태과 — 설기 과다. 휴식·조후 관리가 컨디션의 관건."});
   }
   return notes;
