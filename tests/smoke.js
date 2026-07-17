@@ -49,7 +49,7 @@ setTimeout(()=>{
   check("대화 추천질문 버튼", doc.querySelectorAll("#saju-chat .chat-suggest button").length>=3, String(doc.querySelectorAll("#saju-chat .chat-suggest button").length));
   // 심층 리포트 CTA + 가격 앵커
   check("심층 리포트 버튼 존재", !!doc.getElementById("report-go"));
-  check("리포트 가격 앵커(9,900원)", /9,900원/.test(doc.querySelector(".report-cta")?.innerHTML||""));
+  check("리포트 가격 앵커(3,900원)", /3,900원/.test(doc.querySelector(".report-cta")?.innerHTML||""));
   check("리포트 목차 칩", doc.querySelectorAll(".report-toc span").length>=5);
   // '더 깊게' 훅 (summary-then-paywall 동선)
   check("도메인 → 리포트 훅", doc.querySelectorAll(".go-deep").length>=3, String(doc.querySelectorAll(".go-deep").length));

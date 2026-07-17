@@ -202,7 +202,7 @@ window.mountSajuChat = function (r) {
         <span>당신을 한 문장으로</span><span>빛과 그림자</span><span>일과 돈</span><span>사랑의 시기</span><span>${tocTimeline}</span><span>10년 달력</span><span>${tocRx}</span>
       </div>
       <p class="report-price"><b class="free">지금은 오픈 기념 무료</b></p>
-      <p class="report-anchor">정식 오픈 후 9,900원 — 시중 앱 심층 리포트는 보통 1~2만 원대예요.</p>
+      <p class="report-anchor">정식 오픈 후 3,900원 — 시중 앱 심층 리포트는 보통 1~2만 원대예요.</p>
       <button class="btn" id="report-go">내 리포트 받기</button>
       <div id="report-out" class="report-out"></div>`;
   const freeEnd = document.getElementById("free-end");
@@ -227,7 +227,7 @@ window.mountSajuChat = function (r) {
       <button data-q="돈은 어떻게 관리하는 게 좋아?">재물 관리</button>
     </div>
     <div class="chat-compat">
-      <button class="btn secondary" id="compat-toggle">💞 궁합 보기 — 지금은 무료 (정식 오픈 후 4,900원)</button>
+      <button class="btn secondary" id="compat-toggle">💞 궁합 보기 — 지금은 무료 (정식 오픈 후 1,900원)</button>
       <div class="compat-form hidden" id="compat-form">
         <p class="compat-note">상대 생년월일을 넣으면 두 사주를 계산해 교차 관계(합·충·오행 보완)를 근거로 궁합을 봐드려요.</p>
         <div class="compat-fields">
