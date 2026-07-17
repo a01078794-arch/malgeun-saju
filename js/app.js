@@ -96,6 +96,10 @@ function onSubmit(e){
 function T(o){ return o[MODE]||o.easy; }
 function gz(p){ return STEMS[p.stem]+BRANCHES[p.branch]; }
 function gzKo(p){ return STEMS_KO[p.stem]+BRANCHES_KO[p.branch]; }
+// 간지 표시: 쉬운말 모드는 한글 먼저, 전문가 모드는 한자
+function gzDisp(stem,branch){
+  return MODE==="easy" ? STEMS_KO[stem]+BRANCHES_KO[branch] : STEMS[stem]+BRANCHES[branch];
+}
 function chapter(no, title, badge, inner, opts={}){
   const lock = opts.locked? ` data-locked="true"` : "";
   return `<section class="chapter${opts.locked?" locked":""}" id="ch-${no}"${lock}>
@@ -149,8 +153,8 @@ function render(r){
     const sGod=key==="day"?"일간":tenGod(ds,p.stem);
     pillarHtml+=`<div class="pillar ${key==='day'?'day-pillar':''}">
       <div class="p-label">${lab}</div><div class="p-god">${sGod}</div>
-      <div class="p-char" style="color:${ELEM_COLOR[STEM_ELEM[p.stem]]}">${STEMS[p.stem]}</div>
-      <div class="p-char" style="color:${ELEM_COLOR[BRANCH_ELEM[p.branch]]}">${BRANCHES[p.branch]}</div>
+      <div class="p-char" style="color:${ELEM_COLOR[STEM_ELEM[p.stem]]}">${STEMS[p.stem]}<span class="p-read">${STEMS_KO[p.stem]}</span></div>
+      <div class="p-char" style="color:${ELEM_COLOR[BRANCH_ELEM[p.branch]]}">${BRANCHES[p.branch]}<span class="p-read">${BRANCHES_KO[p.branch]}</span></div>
       <div class="p-god">${tenGodBranch(ds,p.branch)}</div><div class="p-sub">${twelveStage(ds,p.branch)}</div>
     </div>`;
   }
@@ -213,13 +217,13 @@ function render(r){
   let luckHtml=`<div class="luck-strip">`;
   r.luckPillars.forEach(lp=>{
     const active=nowYear>=lp.startYear&&nowYear<lp.startYear+10;
-    luckHtml+=`<div class="luck ${active?'active':''}"><div class="l-age">${lp.startAge}세<br><span>${lp.startYear}~</span></div><div class="l-gz">${STEMS[lp.stem]}${BRANCHES[lp.branch]}</div><div class="l-god">${tenGod(ds,lp.stem)}·${tenGodBranch(ds,lp.branch)}</div></div>`;
+    luckHtml+=`<div class="luck ${active?'active':''}"><div class="l-age">${lp.startAge}세<br><span>${lp.startYear}~</span></div><div class="l-gz">${gzDisp(lp.stem,lp.branch)}</div><div class="l-god">${tenGod(ds,lp.stem)}·${tenGodBranch(ds,lp.branch)}</div></div>`;
   });
   luckHtml+=`</div>`;
   const cur=r.luckPillars.find(lp=>nowYear>=lp.startYear&&nowYear<lp.startYear+10);
   let curTxt="";
   if(cur){ const g1=tenGod(ds,cur.stem);
-    curTxt=`<p><b>지금 대운(${STEMS[cur.stem]}${BRANCHES[cur.branch]}, ${cur.startAge}~${cur.startAge+9}세)</b>의 키워드는 <b>${g1}</b> — ${T(TEN_GOD_TEXT[g1])}. 10년 단위로 삶의 배경 계절이 바뀝니다.</p>`; }
+    curTxt=`<p><b>지금 대운(${gzDisp(cur.stem,cur.branch)}, ${cur.startAge}~${cur.startAge+9}세)</b>의 키워드는 <b>${g1}</b> — ${T(TEN_GOD_TEXT[g1])}. 10년 단위로 삶의 배경 계절이 바뀝니다.</p>`; }
   const ch4=chapter("四","대운 — 십 년의 계절","계산", luckHtml+curTxt+`<p class="note">대운수 ${r.luckStart} · ${r.forward?"순행":"역행"} (절기 정밀 계산)</p>`);
 
   /* ══ 테마 리포트 (잠금 상품) ══ */
@@ -267,7 +271,7 @@ function render(r){
 
   /* ── 七: 신년운세 (올해 + 월별) ── */
   const thisYF=years5[0];
-  let nyHtml=`<p class="lede">${nowYear}년(${STEMS[thisYF.stem]}${BRANCHES[thisYF.branch]})은 나에게 <b>${thisYF.stemGod}·${thisYF.branchGod}</b>의 해 — ${T(TEN_GOD_TEXT[thisYF.stemGod])}.</p>`;
+  let nyHtml=`<p class="lede">${nowYear}년(${gzDisp(thisYF.stem,thisYF.branch)}년)은 나에게 <b>${thisYF.stemGod}·${thisYF.branchGod}</b>의 해 — ${T(TEN_GOD_TEXT[thisYF.stemGod])}.</p>`;
   thisYF.events.forEach(e2=>{ nyHtml+=`<p class="yevent">✨ ${e2}</p>`; });
   const yStemIdx=((nowYear-4)%10+10)%10;
   const inStemTbl=[2,4,6,8,0];
@@ -279,7 +283,7 @@ function render(r){
     const rel=[];
     if(YUKHAP2[mb]===P.day.branch) rel.push("💞");
     if(((mb-P.day.branch)%12+12)%12===6) rel.push("⚡");
-    mHtml+=`<div class="mcard ${rel.length?"mark":""}"><b>${MONTH_RANGE_LABEL[mi2]}</b><span class="mgz">${STEMS[ms]}${BRANCHES[mb]}</span><span class="mgod">${mg}${rel.join("")}</span><p>${MONTH_TIP[mg]}</p></div>`;
+    mHtml+=`<div class="mcard ${rel.length?"mark":""}"><b>${MONTH_RANGE_LABEL[mi2]}</b><span class="mgz">${gzDisp(ms,mb)}</span><span class="mgod">${mg}${rel.join("")}</span><p>${MONTH_TIP[mg]}</p></div>`;
   }
   mHtml+=`</div><p class="note">월 경계는 절기 기준(날짜는 근사) · 💞=배우자궁과 합(관계·협력의 달) ⚡=배우자궁과 충(변동의 달)</p>`;
   const ch7=chapter("七",`${nowYear} 신년운세 — 열두 달의 리듬`,"해석", nyHtml+mHtml);
@@ -300,7 +304,7 @@ function render(r){
   /* ── 九: 오년의 달력 (잠금) ── */
   let calHtml=`<div class="year-cards">`;
   years5.forEach(yf=>{
-    calHtml+=`<div class="ycard"><h4>${yf.year} <span>${STEMS[yf.stem]}${BRANCHES[yf.branch]}</span></h4>
+    calHtml+=`<div class="ycard"><h4>${yf.year} <span>${gzDisp(yf.stem,yf.branch)}</span></h4>
       <p class="ygods">${yf.stemGod} · ${yf.branchGod}</p><p>${T(TEN_GOD_TEXT[yf.stemGod])}</p>
       ${yf.events.map(e2=>`<p class="yevent">✨ ${e2}</p>`).join("")}</div>`;
   });

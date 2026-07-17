@@ -13,10 +13,10 @@ let CHAT_HISTORY = [];   // {role, content}
 let CHAT_CTX = "";       // 근거 사주 텍스트 (본인 또는 궁합)
 let MY_R = null;         // 본인 계산 결과 (궁합용 보관)
 
-/* 계산된 사주 → 근거 텍스트 (한 사람) */
+/* 계산된 사주 → 근거 텍스트 (한 사람, 요약판 — 궁합용) */
 function buildChartText(r) {
   const P = r.pillars, ds = P.day.stem;
-  const gz = k => P[k] ? `${STEMS[P[k].stem]}${BRANCHES[P[k].branch]}(${STEMS_KO[P[k].stem]}${BRANCHES_KO[P[k].branch]})` : "시간모름";
+  const gz = k => P[k] ? `${STEMS_KO[P[k].stem]}${BRANCHES_KO[P[k].branch]}(${STEMS[P[k].stem]}${BRANCHES[P[k].branch]})` : "시간모름";
   const cnt = elementCount(P);
   const st = strengthEstimate(P).label.replace("(참고)", "");
   const it = interpret(r, "expert");
@@ -25,14 +25,100 @@ function buildChartText(r) {
   const yf = yearlyFortune(P, now, 1)[0];
   const lines = [];
   lines.push(`명식(년월일시): 연 ${gz("year")} · 월 ${gz("month")} · 일 ${gz("day")} · 시 ${gz("hour")}`);
-  lines.push(`일간: ${STEMS[ds]}(${STEMS_KO[ds]}) · 성별: ${r.input.gender === "M" ? "남성" : "여성"}`);
+  lines.push(`일간: ${STEMS_KO[ds]}(${STEMS[ds]}) · 성별: ${r.input.gender === "M" ? "남성" : "여성"}`);
   lines.push(`오행 개수: 목${cnt.목} 화${cnt.화} 토${cnt.토} 금${cnt.금} 수${cnt.수} · 신강약(참고): ${st}`);
   if (it.structures.length) lines.push(`대표 구조: ${it.structures.join(" / ")}`);
   const rel = [...it.stemRel, ...it.branchRel];
   if (rel.length) lines.push(`글자 관계(합충형): ${rel.slice(0, 5).join(" / ")}`);
-  if (cur) lines.push(`현재 대운: ${STEMS[cur.stem]}${BRANCHES[cur.branch]} (${cur.startAge}~${cur.startAge + 9}세), 십성 ${tenGod(ds, cur.stem)}`);
-  lines.push(`올해(${now} ${STEMS[yf.stem]}${BRANCHES[yf.branch]}): ${yf.stemGod}·${yf.branchGod}${yf.events.length ? " — " + yf.events.join("; ") : ""}`);
+  if (cur) lines.push(`현재 대운: ${STEMS_KO[cur.stem]}${BRANCHES_KO[cur.branch]} (${cur.startAge}~${cur.startAge + 9}세), 십성 ${tenGod(ds, cur.stem)}`);
+  lines.push(`올해(${now} ${STEMS_KO[yf.stem]}${BRANCHES_KO[yf.branch]}): ${yf.stemGod}·${yf.branchGod}${yf.events.length ? " — " + yf.events.join("; ") : ""}`);
   return lines.join("\n");
+}
+
+/* 계산된 사주 → 심층 리포트·상담용 풀 컨텍스트 (엔진이 아는 모든 것) */
+function buildReportContext(r) {
+  const P = r.pillars, ds = P.day.stem;
+  const i = r.input || {};
+  const today = new Date();
+  const now = today.getFullYear();
+  const hadBirthday = (today.getMonth() + 1 > i.month) || (today.getMonth() + 1 === i.month && today.getDate() >= i.day);
+  const age = now - i.year - (hadBirthday ? 0 : 1);
+  const season = seasonOfMonthIdx(r.monthIdx);
+  const posKo = { year: "연주", month: "월주", day: "일주", hour: "시주" };
+  const L = [];
+
+  L.push("=== 맑은사주 검증 계산 데이터 (전부 결정론 계산값 — 재계산·변경 금지) ===");
+  L.push(`[기본] 출생 ${i.year}-${String(i.month).padStart(2, "0")}-${String(i.day).padStart(2, "0")}${i.hourUnknown ? " (시간 모름)" : ` ${String(i.hour).padStart(2, "0")}:${String(i.minute || 0).padStart(2, "0")}`} · ${i.gender === "M" ? "남성" : "여성"} · ${i.placeName || "출생지 미상"}${r.trueSolar ? ` · 진태양시 ${r.trueSolar}` : ""}`);
+  L.push(`[오늘] ${now}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")} · 현재 만 ${age}세`);
+
+  L.push("[명식 — 여덟 글자]");
+  for (const k of ["year", "month", "day", "hour"]) {
+    const p = P[k];
+    if (!p) { L.push(`- ${posKo[k]}: 시간 모름(시주 제외하고 판단)`); continue; }
+    const hid = HIDDEN_STEMS[BRANCHES[p.branch]].map(h => STEMS_KO[STEMS.indexOf(h)]).join("·");
+    const sGod = k === "day" ? "일간(나)" : tenGod(ds, p.stem);
+    L.push(`- ${posKo[k]}: ${STEMS_KO[p.stem]}${BRANCHES_KO[p.branch]}(${STEMS[p.stem]}${BRANCHES[p.branch]}) — 천간 ${sGod} / 지지 ${tenGodBranch(ds, p.branch)} / 십이운성 ${twelveStage(ds, p.branch)} / 지장간 ${hid}`);
+  }
+  const dm = DAY_MASTER_TEXT[STEMS[ds]];
+  L.push(`[일간] ${STEMS_KO[ds]}(${STEMS[ds]}) ${STEM_ELEM[ds]} — 비유: ${dm.title} · 태어난 계절: ${SEASON_NAMES[season]} · 캐릭터 라벨: ${CHAR_LABELS[STEMS[ds]][season]}`);
+  L.push(`[일간 해설] ${dm.expert}`);
+
+  const cnt = elementCount(P);
+  const zeros = ["목", "화", "토", "금", "수"].filter(e => cnt[e] === 0);
+  const maxE = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+  L.push(`[오행 개수] 목${cnt.목} 화${cnt.화} 토${cnt.토} 금${cnt.금} 수${cnt.수} — 최다: ${maxE[0]}(${maxE[1]})${zeros.length ? ` / 없음: ${zeros.join("·")}` : " / 없는 오행 없음"}`);
+  const st = strengthEstimate(P);
+  const root = rootedness(P);
+  L.push(`[신강약(참고)] ${st.label.replace("(참고)", "")} (${st.detail.join("·")}) · 통근: ${root.expert}`);
+  L.push(`[계절 조후 처방] ${JOHU_HINT[STEM_ELEM[ds]][season]}`);
+
+  const structs = godStructures(P);
+  if (structs.length) { L.push("[대표 구조 — 이 사주 개인차의 핵심]"); structs.forEach(s => L.push(`- ${s.expert}`)); }
+  const rels = [...stemRelations(P), ...branchRelations(P)];
+  if (rels.length) { L.push("[글자 관계(합충형)]"); rels.forEach(x => L.push(`- ${x.expert}`)); }
+
+  const sals = shinsal(P, r.sajuYear).filter(s => !s.absent);
+  if (sals.length) L.push(`[신살] ${sals.map(s => `${s.name}(${s.where})`).join(" / ")}`);
+
+  const ssi = SPOUSE_STAR_INFO[i.gender === "M" ? "M" : "F"];
+  let spCount = 0; const spWhere = [];
+  for (const k of ["year", "month", "day", "hour"]) {
+    const p = P[k]; if (!p) continue;
+    if (k !== "day") { const g1 = tenGod(ds, p.stem); if (ssi.stars.includes(g1)) { spCount++; spWhere.push(`${posKo[k]} 천간 ${g1}`); } }
+    const g2 = tenGodBranch(ds, p.branch); if (ssi.stars.includes(g2)) { spCount++; spWhere.push(`${posKo[k]} 지지 ${g2}`); }
+  }
+  L.push(`[배우자 기운] ${i.gender === "M" ? "남성→재성" : "여성→관성"} 기준 ${spCount}개${spWhere.length ? ` (${spWhere.join(", ")})` : ""} · 배우자 자리(일지): ${tenGodBranch(ds, P.day.branch)}·${twelveStage(ds, P.day.branch)}`);
+  let wCnt = { 정재: 0, 편재: 0 };
+  for (const k of ["year", "month", "day", "hour"]) {
+    const p = P[k]; if (!p) continue;
+    if (k !== "day") { const g1 = tenGod(ds, p.stem); if (wCnt[g1] !== undefined) wCnt[g1]++; }
+    const g2 = tenGodBranch(ds, p.branch); if (wCnt[g2] !== undefined) wCnt[g2]++;
+  }
+  L.push(`[재물 기운] 정재 ${wCnt.정재} · 편재 ${wCnt.편재}`);
+
+  L.push(`[대운 — 대운수 ${r.luckStart}, ${r.forward ? "순행" : "역행"}]`);
+  r.luckPillars.forEach(lp => {
+    const cur = now >= lp.startYear && now < lp.startYear + 10;
+    L.push(`- ${lp.startAge}~${lp.startAge + 9}세 (${lp.startYear}~${lp.startYear + 9}): ${STEMS_KO[lp.stem]}${BRANCHES_KO[lp.branch]}(${STEMS[lp.stem]}${BRANCHES[lp.branch]}) — ${tenGod(ds, lp.stem)}·${tenGodBranch(ds, lp.branch)}${cur ? " ★현재 대운" : ""}`);
+  });
+
+  L.push("[세운 — 앞으로 10년]");
+  yearlyFortune(P, now, 10).forEach(y => {
+    L.push(`- ${y.year} ${STEMS_KO[y.stem]}${BRANCHES_KO[y.branch]}: ${y.stemGod}·${y.branchGod}${y.events.length ? " — " + y.events.join("; ") : ""}`);
+  });
+
+  // 올해 월별 리듬 (월두법, 절기 경계 근사)
+  const yStemIdx = ((now - 4) % 10 + 10) % 10;
+  const inStemTbl = [2, 4, 6, 8, 0];
+  const months = [];
+  for (let mi = 0; mi < 12; mi++) {
+    const ms = (inStemTbl[yStemIdx % 5] + mi) % 10, mb = (mi + 2) % 12;
+    months.push(`${MONTH_RANGE_LABEL[mi]} ${STEMS_KO[ms]}${BRANCHES_KO[mb]}(${tenGod(ds, ms)})`);
+  }
+  L.push(`[올해 월별(절기 기준)] ${months.join(" / ")}`);
+
+  if (r.warnings && r.warnings.length) { L.push("[계산 경고]"); r.warnings.forEach(w => L.push(`- ${w}`)); }
+  return L.join("\n");
 }
 
 /* ---- 궁합: 두 사주의 교차 관계 (계산값) ---- */
@@ -91,7 +177,7 @@ function el(tag, cls, html) {
 window.mountSajuChat = function (r) {
   CHAT_HISTORY = [];
   MY_R = r;
-  CHAT_CTX = buildChartText(r);
+  CHAT_CTX = buildReportContext(r);   // 대화도 풀 컨텍스트로 — 구체적 연도·구조 근거 답변
   logSaju(r, "사주조회");
   const host = document.getElementById("result");
   if (!host) return;
@@ -103,7 +189,7 @@ window.mountSajuChat = function (r) {
   box.innerHTML = `
     <div class="report-cta">
       <h2 class="report-title">✨ 나만의 심층 리포트</h2>
-      <p class="report-sub">계산된 내 사주를 <b>쉬운 말로 길게</b> 풀어드려요 — 성격·일·돈·인연·올해 흐름 + 실천 조언까지. <del>990원</del> <b>오픈 기념 무료</b></p>
+      <p class="report-sub">계산된 내 사주 <b>전체</b>(여덟 글자·대운·앞으로 10년 세운까지)를 근거로, <b>쉬운 말로 깊게</b> 풀어드려요 — 성격·일·돈·인연·건강·10년 달력·처방전까지. 글이 실시간으로 내려옵니다. <del>990원</del> <b>오픈 기념 무료</b></p>
       <button class="btn" id="report-go">내 심층 리포트 받기</button>
       <div id="report-out" class="report-out"></div>
     </div>
@@ -258,31 +344,51 @@ async function streamChat(question, holder) {
   }
 }
 
-/* ---- 심층 리포트 (Claude 생성, 쉬운 말·긴 글·조언) ---- */
+/* ---- 심층 리포트 (Claude 스트리밍 — 글이 실시간으로 내려온다) ---- */
 async function generateReport() {
   const btn = document.getElementById("report-go");
   const out = document.getElementById("report-out");
   if (!WORKER_URL) { out.innerHTML = '<p class="report-note">리포트 기능 준비 중이에요 🙏</p>'; return; }
   btn.disabled = true;
   const label = btn.textContent;
-  btn.textContent = "리포트 쓰는 중… (20초쯤 걸려요)";
-  out.innerHTML = '<p class="typing" style="padding:14px 2px">✍️ 당신의 사주를 읽고 쓰는 중이에요…</p>';
+  btn.textContent = "리포트 쓰는 중…";
+  out.innerHTML = '<p class="typing" style="padding:14px 2px">✍️ 당신의 사주를 깊게 읽는 중이에요 — 곧 첫 문장이 내려옵니다…</p>';
+  let ok = false;
   try {
     const resp = await fetch(WORKER_URL, {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mode: "report", chartText: buildChartText(MY_R) }),
+      body: JSON.stringify({ mode: "report", chartText: buildReportContext(MY_R) }),
     });
-    let data = null; try { data = await resp.json(); } catch { data = null; }
-    if (!resp.ok || !data || data.error) {
+    const ctype = resp.headers.get("content-type") || "";
+    if (!resp.ok || ctype.includes("application/json")) {
+      let data = null; try { data = await resp.json(); } catch { data = null; }
+      if (resp.ok && data && data.text) { // 구버전 백엔드(JSON) 하위호환
+        out.innerHTML = mdToHtml(String(data.text));
+        ok = true;
+        return;
+      }
       out.innerHTML = '<p class="report-note">⚠️ ' + escapeHtml(String((data && (data.detail || data.error)) || ("오류 " + resp.status)).slice(0, 200)) + '</p>';
       return;
     }
-    out.innerHTML = mdToHtml(String(data.text || ""));
+    // 스트리밍 수신 — 도착하는 대로 렌더 (150ms 스로틀)
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let md = "", lastRender = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      md += dec.decode(value, { stream: true });
+      const t = Date.now();
+      if (t - lastRender > 150) { out.innerHTML = mdToHtml(md) + '<p class="typing">✍️ …</p>'; lastRender = t; }
+    }
+    md += dec.decode();
+    out.innerHTML = md.trim() ? mdToHtml(md) : '<p class="report-note">(응답이 비어 있어요. 다시 시도해 주세요.)</p>';
+    ok = !!md.trim();
   } catch (e) {
     out.innerHTML = '<p class="report-note">⚠️ 연결 실패: ' + escapeHtml(String(e && e.message || e)) + '</p>';
   } finally {
     btn.disabled = false;
-    btn.textContent = out.innerHTML && !out.querySelector(".report-note") ? "리포트 다시 받기" : label;
+    btn.textContent = ok ? "리포트 다시 받기" : label;
   }
 }
 

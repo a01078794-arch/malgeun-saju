@@ -89,6 +89,7 @@ input:disabled{opacity:.35;}
 .p-label{font-size:.7rem; color:var(--ink-dim); margin-bottom:4px;}
 .p-god{font-size:.66rem; color:var(--ok); min-height:1.1em;}
 .p-char{font-family:"Noto Serif KR",serif; font-size:1.95rem; font-weight:700; line-height:1.25;}
+.p-read{display:block; font-size:.62rem; font-weight:400; color:var(--ink-dim); letter-spacing:.1em; line-height:1.1; margin-top:-2px;}
 .p-sub{font-size:.68rem; color:var(--ink-dim); margin-top:4px;}
 .pillar.unknown .p-char{color:var(--ink-dim);}
 .calc-details{margin-top:10px; border-top:1px dashed var(--line); padding-top:12px;}
