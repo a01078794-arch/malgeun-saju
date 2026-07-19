@@ -98,10 +98,30 @@ function onSubmit(e){
   const input={year:y,month:m,day:d,hour:h??12,minute:mi??0,hourUnknown,gender:g,longitude:CITIES[ci].lon,placeName:CITIES[ci].name};
   LAST=computeSaju(input);
   render(LAST);
+  logView(input, LAST);
   const params=new URLSearchParams({y,mo:m,d,g,c:ci});
   if(!hourUnknown){ params.set("h",h); params.set("mi",mi); }
   try{ history.replaceState(null,"","?"+params.toString()); }catch(_e){}
   document.getElementById("result").scrollIntoView({behavior:"smooth"});
+}
+
+/* 조회 이벤트를 백엔드 기록(Vercel Blob)으로 전송 — 실패해도 조용히 무시 */
+function logView(input, r){
+  try{
+    const pad=n=>String(n).padStart(2,"0");
+    const ms=["year","month","day","hour"].map(k=>r.pillars[k]?STEMS_KO[r.pillars[k].stem]+BRANCHES_KO[r.pillars[k].branch]:"시모름").join(" ");
+    fetch("https://saju-chat-vercel.vercel.app/api/chat",{
+      method:"POST", headers:{"content-type":"application/json"},
+      body:JSON.stringify({mode:"log", event:{
+        type:"조회",
+        "생년월일":`${input.year}-${pad(input.month)}-${pad(input.day)}`,
+        "시":input.hourUnknown?"모름":`${pad(input.hour)}:${pad(input.minute)}`,
+        "성별":input.gender==="M"?"남성":"여성",
+        "지역":input.placeName||"",
+        "명식":ms
+      }})
+    }).catch(()=>{});
+  }catch(_e){}
 }
 
 function T(o){ return o[MODE]||o.easy; }

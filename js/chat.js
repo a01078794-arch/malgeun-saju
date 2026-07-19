@@ -24,6 +24,9 @@ function buildChartText(r) {
   const cur = r.luckPillars.find(lp => now >= lp.startYear && now < lp.startYear + 10);
   const yf = yearlyFortune(P, now, 1)[0];
   const lines = [];
+  const bi = r.input || {};
+  const pad = n => String(n).padStart(2, "0");
+  if (bi.year) lines.push(`출생: ${bi.year}-${pad(bi.month)}-${pad(bi.day)}${bi.hourUnknown ? " (시간 모름)" : ` ${pad(bi.hour)}:${pad(bi.minute || 0)}`}${bi.placeName ? ` · ${bi.placeName}` : ""}`);
   lines.push(`명식(년월일시): 연 ${gz("year")} · 월 ${gz("month")} · 일 ${gz("day")} · 시 ${gz("hour")}`);
   lines.push(`일간: ${STEMS_KO[ds]}(${STEMS[ds]}) · 성별: ${r.input.gender === "M" ? "남성" : "여성"}`);
   lines.push(`오행 개수: 목${cnt.목} 화${cnt.화} 토${cnt.토} 금${cnt.금} 수${cnt.수} · 신강약(참고): ${st}`);
