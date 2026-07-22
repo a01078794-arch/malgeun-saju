@@ -9,16 +9,42 @@ function esc(s) {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+function getCookie(req, name) {
+  const raw = req.headers.cookie || "";
+  for (const part of raw.split(";")) {
+    const i = part.indexOf("=");
+    if (i > -1 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return "";
+}
+
 export default async function handler(req, res) {
   const PW = process.env.ADMIN_PW || "";
-  const given = (req.query && (req.query.pw || req.query.PW)) || "";
+  const cleanPath = (req.url || "/api/admin").split("?")[0];
+  let body = req.body;
+  if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
+  const fromQuery = !!(req.query && (req.query.pw || req.query.PW));
+  // 비밀번호는 쿠키(로그인 유지) → POST 폼 본문 → 쿼리(구 북마크 호환) 순으로 읽는다.
+  const given = getCookie(req, "spw")
+    || (body && body.pw)
+    || (req.query && (req.query.pw || req.query.PW))
+    || "";
   res.setHeader("content-type", "text/html; charset=utf-8");
   if (!PW || String(given) !== PW) {
     res.status(401).send(`<meta charset=utf-8><body style="font-family:sans-serif;padding:40px;max-width:520px;margin:auto">
-      <h3>🔒 기록 보기</h3><p>주소 끝에 <code>?pw=비밀번호</code>를 붙여 열어주세요.</p>
-      <form onsubmit="location.href=location.pathname+'?pw='+encodeURIComponent(this.pw.value);return false">
-      <input name=pw type=password placeholder=비밀번호 style="padding:10px;font-size:16px;width:70%">
-      <button style="padding:10px 16px;font-size:16px">열기</button></form></body>`);
+      <h3>🔒 기록 보기</h3><p>비밀번호를 입력해 열어주세요.</p>
+      <form method="post" style="display:flex;gap:8px;margin-top:12px">
+      <input name=pw type=password placeholder=비밀번호 autofocus style="padding:10px;font-size:16px;width:70%">
+      <button style="padding:10px 16px;font-size:16px">열기</button></form>
+      <p style="color:#8a7a5c;font-size:.85rem;margin-top:16px">입력한 비밀번호는 주소창·방문기록에 남지 않습니다.</p></body>`);
+    return;
+  }
+  // 인증 성공 → httpOnly 쿠키로 세션 유지, URL에 비밀번호가 남지 않게 정리한다.
+  res.setHeader("Set-Cookie", `spw=${encodeURIComponent(String(given))}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400`);
+  if (req.method === "POST" || fromQuery) {   // 폼 로그인·구 북마크 → 깨끗한 GET 주소로 리다이렉트 (Post/Redirect/Get)
+    res.statusCode = 303;
+    res.setHeader("Location", cleanPath);
+    res.end();
     return;
   }
 
@@ -76,7 +102,7 @@ export default async function handler(req, res) {
   tr:nth-child(even){background:#faf6ec}
   .empty{padding:40px;text-align:center;color:#8a7a5c}
 </style>
-<header><h1>🔮 맑은사주 — 이용 기록</h1><p>총 ${rows.length}건 · ${summary || "아직 없음"} · <a href="?pw=${encodeURIComponent(given)}" style="color:#fff">새로고침</a></p></header>
+<header><h1>🔮 맑은사주 — 이용 기록</h1><p>총 ${rows.length}건 · ${summary || "아직 없음"} · <a href="${esc(cleanPath)}" style="color:#fff">새로고침</a></p></header>
 <div class=wrap>
 ${rows.length ? `<table><thead><tr><th>시각</th><th>종류</th><th>생년월일</th><th>시</th><th>성별</th><th>지역</th><th>명식</th><th>질문</th></tr></thead><tbody>${trs}</tbody></table>`
     : `<p class=empty>아직 기록이 없어요. 사이트에서 사주를 조회하거나 질문하면 여기 쌓입니다.</p>`}

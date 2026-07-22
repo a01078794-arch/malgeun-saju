@@ -126,6 +126,21 @@ function cors(res, origin) {
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "content-type");
+  res.setHeader("Vary", "Origin");
+}
+
+// 허용 출처 목록 (env ALLOW_ORIGIN 에 쉼표로 여러 개 지정 가능, 기본값은 DEFAULT_ORIGIN)
+function allowedOrigins() {
+  const raw = process.env.ALLOW_ORIGIN || DEFAULT_ORIGIN;
+  return raw.split(",").map(s => s.trim().replace(/\/+$/, "")).filter(Boolean);
+}
+
+// 요청이 실제로 온 출처. 브라우저는 교차출처 POST에 Origin을 자동으로 붙인다.
+// Origin이 없으면 Referer의 출처로 대체 판정한다. (curl/봇은 보통 둘 다 없다)
+function requestOrigin(req) {
+  let o = req.headers.origin;
+  if (!o && req.headers.referer) { try { o = new URL(req.headers.referer).origin; } catch { o = ""; } }
+  return (o || "").replace(/\/+$/, "");
 }
 
 async function logEvent(payload) {
@@ -182,10 +197,14 @@ async function pipeAnthropicStream(upstream, onText) {
 
 /* ---------------- 핸들러 ---------------- */
 export default async function handler(req, res) {
-  const origin = process.env.ALLOW_ORIGIN || DEFAULT_ORIGIN;
-  cors(res, origin);
+  const allow = allowedOrigins();
+  const reqOrigin = requestOrigin(req);
+  const isAllowed = !!reqOrigin && allow.includes(reqOrigin);
+  cors(res, isAllowed ? reqOrigin : allow[0]);
   if (req.method === "OPTIONS") { res.status(204).end(); return; }
   if (req.method !== "POST") { res.status(405).json({ error: "POST only" }); return; }
+  // 오리진 검증 — 브라우저 밖(curl·봇)의 무단 프록시 사용 차단 (API 요금 방어)
+  if (!isAllowed) { res.status(403).json({ error: "forbidden origin" }); return; }
   if (!process.env.ANTHROPIC_API_KEY) { res.status(500).json({ error: "server not configured (no API key)" }); return; }
 
   let body = req.body;
